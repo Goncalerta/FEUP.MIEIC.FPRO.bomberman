@@ -5,7 +5,7 @@
 
 #### Objetivo
 
-Criar um clone do Bomberman (NES) em Pygame
+Criar um clone do [Bomberman](https://www.retrogames.cz/play_085-NES.php) (NES) em Pygame
 
 #### Descrição
 
@@ -30,7 +30,7 @@ e podem matar o próprio jogador, se ele estiver na zona de explosão.
       * parede (1)
       * caixas (2)
       * caixa especial (3)
-      * porta (4) [aparece apenas depois da caixa especial explodir)
+      * porta (4) [aparece apenas depois da caixa especial explodir]
    1. desenhar no ecrã
 1. JOGADOR
    1. desenhar jogador nas coordenadas dele
