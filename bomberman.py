@@ -17,6 +17,34 @@ class Block(Enum):
     BOX_GOAL = 3
     GOAL = 4
 
+class Level:
+    def __init__(self, matrix = None):
+        if matrix == None:
+            self.matrix = [
+                [1 for _ in range(13)],
+                [i == 0 or i == 12 for i in range(13)],
+                [(i+1) % 2 for i in range(13)],
+                [i == 0 or i == 12 for i in range(13)],
+                [(i+1) % 2 for i in range(13)],
+                [i == 0 or i == 12 for i in range(13)],
+                [(i+1) % 2 for i in range(13)],
+                [i == 0 or i == 12 for i in range(13)],
+                [(i+1) % 2 for i in range(13)],
+                [i == 0 or i == 12 for i in range(13)],
+                [(i+1) % 2 for i in range(13)],
+                [i == 0 or i == 12 for i in range(13)],
+                [1 for _ in range(13)],
+            ]
+        else:
+            self.matrix = matrix
+
+    def draw(self, ctx):
+        for i, row in enumerate(self.matrix):
+            for j, block in enumerate(row):
+                ctx['screen'].blit(ctx['entities'][Block(block)], (j*50, i*50))
+
+    
+
 def init():
     size = width, height = 650, 650
     speed = [2, 2]
@@ -26,24 +54,15 @@ def init():
         Block.GRASS: pygame.image.load("assets/grass.png"),
         Block.WALL: pygame.image.load("assets/wall.png")
     }
-    
-    block_rect = entities[Block.GRASS].get_rect()
 
-    level = [
-        [1 for _ in range(13)],
-        [i == 0 or i == 12 for i in range(13)],
-        [(i+1) % 2 for i in range(13)],
-        [i == 0 or i == 12 for i in range(13)],
-        [(i+1) % 2 for i in range(13)],
-        [i == 0 or i == 12 for i in range(13)],
-        [(i+1) % 2 for i in range(13)],
-        [i == 0 or i == 12 for i in range(13)],
-        [(i+1) % 2 for i in range(13)],
-        [i == 0 or i == 12 for i in range(13)],
-        [(i+1) % 2 for i in range(13)],
-        [i == 0 or i == 12 for i in range(13)],
-        [1 for _ in range(13)],
-    ]
+    level = Level()
+
+    context = {
+        'size': size,
+        'speed': speed,
+        'entities': entities,
+        'screen': screen,
+    }
     
     while True:
         for event in pygame.event.get():
@@ -51,14 +70,7 @@ def init():
                 sys.exit()
 
         screen.fill((0, 0, 0))
-
-        for i, row in enumerate(level):
-            for j, block in enumerate(row):
-                screen.blit(entities[Block(block)], (j*50, i*50))
-
-
-            
-        
+        level.draw(context)
         pygame.display.flip()
 
 init()
