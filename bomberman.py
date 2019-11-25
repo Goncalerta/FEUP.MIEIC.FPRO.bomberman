@@ -31,9 +31,10 @@ class Block(Enum):
 
 
 class Player:
-    def __init__(self, x, y):
-        self.pos = (x, y)
+    def __init__(self, x, y, controls):
+        self.pos = [x, y]
         self.direction = 'down'
+        self.controls = controls
 
     def draw(self, ctx):
         assets = ctx['assets']
@@ -47,7 +48,26 @@ class Player:
             img = assets['player_right']
 
         ctx['screen'].blit(img, self.pos)
-
+        
+    def handle_key(self, key, lvl):
+        print(lvl.is_solid(0, 0))
+        def is_collision(ox, oy):
+            x = (self.pos[0]+25)//50 - ox
+            y = (self.pos[1]+25)//50 - oy
+            return lvl.is_solid(x, y)
+            
+        if key == self.controls['up'] and not is_collision(0, 1):
+            self.pos[1] -= 10
+            self.direction = 'up'
+        elif key == self.controls['down'] and not is_collision(0, -1):
+            self.pos[1] += 10
+            self.direction = 'down'
+        elif key == self.controls['left'] and not is_collision(-1, 0):
+            self.pos[0] -= 10
+            self.direction = 'left'
+        elif key == self.controls['right'] and not is_collision(1, 0):
+            self.pos[0] += 10
+            self.direction = 'right'
 
 class Level:
     def __init__(self, matrix=None, goal=None):
@@ -82,7 +102,7 @@ class Level:
                 block.draw(ctx, j*50, i*50)
 
     def is_solid(self, x, y):
-        self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
+        return self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
 
 
 def init():
@@ -103,7 +123,13 @@ def init():
     }
 
     level = Level(goal=(5, 3))
-    player = Player(50, 50)
+    controls = {
+        'up': pygame.K_UP,
+        'down': pygame.K_DOWN,
+        'left': pygame.K_LEFT,
+        'right': pygame.K_RIGHT,
+    }
+    player = Player(50, 50, controls)
 
     context = {
         'size': size,
@@ -116,6 +142,8 @@ def init():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
+            if event.type == pygame.KEYDOWN:
+                player.handle_key(event.key, level)
 
         screen.fill((0, 0, 0))
         level.draw(context)
