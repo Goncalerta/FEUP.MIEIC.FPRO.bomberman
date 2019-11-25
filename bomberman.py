@@ -74,7 +74,10 @@ def init():
         'wall': pygame.image.load('assets/wall.png'),
         'box': pygame.image.load('assets/box.png'),
         'goal': pygame.image.load('assets/goal.png'),
-        'player': pygame.image.load('assets/player.png'),
+        'player_up': pygame.image.load('assets/player_up.png'),
+        'player_down': pygame.image.load('assets/player_down.png'),
+        'player_left': pygame.image.load('assets/player_left.png'),
+        'player_right': pygame.image.load('assets/player_right.png'),
         'bomb': pygame.image.load('assets/bomb.png'),
     }
 
