@@ -7,8 +7,10 @@ Created on Thu Nov 21 18:06:36 2019
 """
 
 from enum import Enum
-import sys, pygame
+import sys
+import pygame
 pygame.init()
+
 
 class Block(Enum):
     GRASS = 0
@@ -24,12 +26,32 @@ class Block(Enum):
             Block.BOX: 'box',
             Block.BOX_GOAL: 'box',
         }
-        ctx['screen'].blit(ctx['assets'][assets_indexes[self]], (x, y))
+        img = ctx['assets'][assets_indexes[self]]
+        ctx['screen'].blit(img, (x, y))
+
+
+class Player:
+    def __init__(self, x, y):
+        self.pos = (x, y)
+        self.direction = 'down'
+
+    def draw(self, ctx):
+        assets = ctx['assets']
+        if self.direction == 'up':
+            img = assets['player_up']
+        elif self.direction == 'down':
+            img = assets['player_down']
+        elif self.direction == 'left':
+            img = assets['player_left']
+        elif self.direction == 'right':
+            img = assets['player_right']
+
+        ctx['screen'].blit(img, self.pos)
 
 
 class Level:
-    def __init__(self, matrix = None, goal = None):
-        if matrix == None:
+    def __init__(self, matrix=None, goal=None):
+        if matrix is None:
             self.matrix = [
                 [1 for _ in range(13)],
                 [i == 0 or i == 12 for i in range(13)],
@@ -50,9 +72,9 @@ class Level:
         else:
             self.matrix = matrix
 
-        if goal != None:
+        if goal is not None:
             x, y = goal
-            self.matrix[y][x] = Block.BOX_GOAL 
+            self.matrix[y][x] = Block.BOX_GOAL
 
     def draw(self, ctx):
         for i, row in enumerate(self.matrix):
@@ -63,11 +85,10 @@ class Level:
         self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
 
 
-
 def init():
     size = width, height = 650, 650
     speed = [2, 2]
-    
+
     screen = pygame.display.set_mode(size)
     assets = {
         'grass': pygame.image.load('assets/grass.png'),
@@ -81,7 +102,8 @@ def init():
         'bomb': pygame.image.load('assets/bomb.png'),
     }
 
-    level = Level(goal = (5, 3))
+    level = Level(goal=(5, 3))
+    player = Player(50, 50)
 
     context = {
         'size': size,
@@ -89,7 +111,7 @@ def init():
         'assets': assets,
         'screen': screen,
     }
-    
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -97,7 +119,8 @@ def init():
 
         screen.fill((0, 0, 0))
         level.draw(context)
+        player.draw(context)
         pygame.display.flip()
 
+
 init()
-    

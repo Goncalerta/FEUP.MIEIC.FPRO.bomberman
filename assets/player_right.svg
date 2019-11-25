@@ -9,13 +9,16 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="50mm"
-   height="50mm"
-   viewBox="0 0 50 50"
+   width="50"
+   height="50"
+   viewBox="0 0 13.229167 13.229167"
    version="1.1"
    id="svg8"
    sodipodi:docname="player_right.svg"
-   inkscape:version="0.92.3 (2405546, 2018-03-11)">
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   inkscape:export-filename="/usr/users2/2019/up201905348/fpro/fpro_bomberman/assets/player_down.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -25,9 +28,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4"
-     inkscape:cx="62.711451"
-     inkscape:cy="119.22655"
+     inkscape:zoom="7.9195959"
+     inkscape:cx="36.604299"
+     inkscape:cy="23.847489"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -35,7 +38,8 @@
      inkscape:window-height="845"
      inkscape:window-x="67"
      inkscape:window-y="27"
-     inkscape:window-maximized="1" />
+     inkscape:window-maximized="1"
+     units="px" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -52,11 +56,11 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(0,-247)">
+     transform="translate(0,-283.77084)">
     <path
        sodipodi:type="star"
        style="fill:#333333;stroke-width:0.26458332"
-       id="path817-6-5"
+       id="path817-6-3"
        sodipodi:sides="3"
        sodipodi:cx="8.3154764"
        sodipodi:cy="292.2753"
@@ -68,13 +72,13 @@
        inkscape:rounded="0"
        inkscape:randomized="0"
        d="M 4.9335151e-7,297 8.3815021,282.71153 16.564927,297.11436 Z"
-       inkscape:transform-center-x="-6.8880345"
-       inkscape:transform-center-y="-0.082353824"
-       transform="matrix(0,2.4945699,-2.9157533,0,870.76811,251.38052)" />
+       inkscape:transform-center-x="-1.6362414"
+       inkscape:transform-center-y="-0.020313234"
+       transform="matrix(0,0.61525981,-0.69263162,0,207.30613,285.32203)" />
     <path
        sodipodi:type="star"
        style="fill:#0066ff;stroke-width:0.26458332"
-       id="path817-3-7-3"
+       id="path817-3-7-6"
        sodipodi:sides="3"
        sodipodi:cx="8.3154764"
        sodipodi:cy="292.2753"
@@ -86,8 +90,8 @@
        inkscape:rounded="0"
        inkscape:randomized="0"
        d="M 4.9335151e-7,297 8.3815021,282.71153 16.564927,297.11436 Z"
-       inkscape:transform-center-x="-5.6481155"
-       inkscape:transform-center-y="-0.061635856"
-       transform="matrix(0,1.8670787,-2.3908894,0,717.43713,256.3035)" />
+       inkscape:transform-center-x="-1.3417003"
+       inkscape:transform-center-y="-0.015207503"
+       transform="matrix(0,0.46049562,-0.56795122,0,170.84693,286.67902)" />
   </g>
 </svg>
