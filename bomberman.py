@@ -9,6 +9,7 @@ Created on Thu Nov 21 18:06:36 2019
 from enum import Enum
 import sys
 import pygame
+import math
 pygame.init()
 
 
@@ -50,24 +51,24 @@ class Player:
         ctx['screen'].blit(img, self.pos)
         
     def handle_key(self, key, lvl):
-        print(lvl.is_solid(0, 0))
-        def is_collision(ox, oy):
-            x = (self.pos[0]+25)//50 - ox
-            y = (self.pos[1]+25)//50 - oy
-            return lvl.is_solid(x, y)
-            
-        if key == self.controls['up'] and not is_collision(0, 1):
-            self.pos[1] -= 10
-            self.direction = 'up'
-        elif key == self.controls['down'] and not is_collision(0, -1):
-            self.pos[1] += 10
-            self.direction = 'down'
-        elif key == self.controls['left'] and not is_collision(-1, 0):
-            self.pos[0] -= 10
-            self.direction = 'left'
-        elif key == self.controls['right'] and not is_collision(1, 0):
-            self.pos[0] += 10
-            self.direction = 'right'
+        new_pos = self.pos[:]
+
+        if key == self.controls['up']:
+            new_pos[1] -= 10
+            new_direction = 'up'
+        elif key == self.controls['down']:
+            new_pos[1] += 10
+            new_direction = 'down'
+        elif key == self.controls['left']:
+            new_pos[0] -= 10
+            new_direction = 'left'
+        elif key == self.controls['right']:
+            new_pos[0] += 10
+            new_direction = 'right'
+        
+        if not lvl.check_collides(*new_pos):
+            self.pos = new_pos
+            self.direction = new_direction
 
 class Level:
     def __init__(self, matrix=None, goal=None):
@@ -103,6 +104,12 @@ class Level:
 
     def is_solid(self, x, y):
         return self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
+    
+    def check_collides(self, x, y):
+        x = x/50
+        y = y/50
+        xl, xh, yl, yh = math.floor(x), math.ceil(x), math.floor(y), math.ceil(y)
+        return self.is_solid(xl, yl) or self.is_solid(xl, yh) or self.is_solid(xh, yl) or self.is_solid(xh, yh)
 
 
 def init():
