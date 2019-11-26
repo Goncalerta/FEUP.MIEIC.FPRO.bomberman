@@ -10,6 +10,7 @@ from enum import Enum
 import sys
 import pygame
 import math
+import time
 pygame.init()
 
 
@@ -32,15 +33,15 @@ class Block(Enum):
 
 
 class Bomb:
-    def __init__(self, x, y, timer=200, radius=3):
+    def __init__(self, x, y, timer=3, radius=3):
         self.pos = [x, y]
         self.timer = timer
         self.radius = radius
+        self.place_time = time.process_time()
     
     def loop(self, ctx):
         self.draw(ctx)
-        self.timer -= 1
-        if self.timer <= 0:
+        if time.process_time() - self.place_time >= self.timer:
             self.detonate(ctx)
     
     def detonate(self, ctx):
