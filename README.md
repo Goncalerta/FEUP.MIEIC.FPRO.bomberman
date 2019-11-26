@@ -32,9 +32,9 @@ e podem matar o próprio jogador, se ele estiver na zona de explosão.
       * ~~caixa especial (3)~~
       * ~~porta (4) [aparece apenas depois da caixa especial explodir]~~
    1. ~~desenhar no ecrã~~
-1. **JOGADOR**
+1. ~~**JOGADOR**~~
    1. ~~desenhar jogador nas coordenadas dele~~
-   1. teclas para movimentar
+   1. ~~teclas para movimentar~~
 1. **BOMBA**
    1. duas listas: posição bombas, tempos bombas
    1. quando algum tempo for menor que 0, dentro dum `raio_bomba=3`:
