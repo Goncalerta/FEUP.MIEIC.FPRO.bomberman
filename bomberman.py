@@ -13,6 +13,7 @@ import math
 import time
 pygame.init()
 
+
 def snap_coordinates(x, y):
     return round(x/50)*50, round(y/50)*50
 
@@ -36,7 +37,7 @@ class Block(Enum):
 
 
 class Bomb:
-    def __init__(self, x, y, timer=3, radius=3):
+    def __init__(self, x, y, radius=3, timer=3):
         self.pos = [x, y]
         self.timer = timer
         self.radius = radius
@@ -48,11 +49,62 @@ class Bomb:
             self.detonate(ctx)
     
     def detonate(self, ctx):
+        x, y = self.pos
+        flames_list = ctx['level']['flames']
+        flame = Flame(x, y, flames_list, self.radius, time.process_time())
+        flames_list.append(flame)
         ctx['level']['bombs'].remove(self)
 
     def draw(self, ctx):
         assets = ctx['assets']
         img = assets['bomb']
+
+        ctx['screen'].blit(img, self.pos)
+
+
+class Flame:
+    def __init__(self, x, y, flames_list, radius, place_time, timer=1, alignment='center', positive_direction=None):
+        self.pos = [x, y]
+        self.timer = timer
+        self.radius = radius
+        self.alignment = alignment
+        self.place_time = place_time
+
+        if radius > 1:
+            if alignment == 'center':
+                l = Flame(x-50, y, flames_list, radius-1, place_time, timer, alignment='horizontal', positive_direction=False)
+                r = Flame(x+50, y, flames_list, radius-1, place_time, timer, alignment='horizontal', positive_direction=True)
+                u = Flame(x, y-50, flames_list, radius-1, place_time, timer, alignment='vertical', positive_direction=False)
+                d = Flame(x, y+50, flames_list, radius-1, place_time, timer, alignment='vertical', positive_direction=True)
+                flames_list += [l, r, u, d]
+            elif alignment == 'horizontal':
+                if positive_direction:
+                    nx = x+50
+                else:
+                    nx = x-50
+                flame = Flame(nx, y, flames_list, radius-1, place_time, timer, alignment='horizontal', positive_direction=positive_direction)
+                flames_list.append(flame)
+            elif alignment == 'vertical':
+                if positive_direction:
+                    ny = y+50
+                else:
+                    ny = y-50
+                flame = Flame(x, ny, flames_list, radius-1, place_time, timer, alignment='vertical', positive_direction=positive_direction)
+                flames_list.append(flame)
+    
+    def loop(self, ctx):
+        self.draw(ctx)
+        if time.process_time() - self.place_time >= self.timer:
+            ctx['level']['flames'].remove(self)
+
+    def draw(self, ctx):
+        assets = ctx['assets']
+        if self.alignment == 'center':
+            img = assets['flame_center']
+        elif self.alignment == 'horizontal':
+            img = assets['flame_horizontal']
+        elif self.alignment == 'vertical':
+            img = assets['flame_vertical']
 
         ctx['screen'].blit(img, self.pos)
 
@@ -208,6 +260,8 @@ def gameloop(ctx):
     ctx['level']['player'].draw(ctx)
     for bomb in ctx['level']['bombs']:
         bomb.loop(ctx)
+    for flame in ctx['level']['flames']:
+        flame.loop(ctx)
     pygame.display.flip()
 
 
