@@ -70,7 +70,7 @@ class Player:
             self.pos = new_pos
             self.direction = new_direction
 
-class Level:
+class BlockMatrix:
     def __init__(self, matrix=None, goal=None):
         if matrix is None:
             self.matrix = [
@@ -113,7 +113,7 @@ class Level:
 
 
 def init():
-    size = width, height = 650, 650
+    size = 650, 650
     speed = [2, 2]
 
     screen = pygame.display.set_mode(size)
@@ -129,35 +129,46 @@ def init():
         'bomb': pygame.image.load('assets/bomb.png'),
     }
 
-    level = Level(goal=(5, 3))
     controls = {
         'up': pygame.K_UP,
         'down': pygame.K_DOWN,
         'left': pygame.K_LEFT,
         'right': pygame.K_RIGHT,
+        'place_bomb': pygame.K_SPACE,
     }
-    player = Player(50, 50, controls)
+
+    level = {
+        'matrix': BlockMatrix(goal=(5, 3)),
+        'player': Player(50, 50, controls),
+        'bombs': [],
+        'flames': [],
+    }
 
     context = {
         'size': size,
         'speed': speed,
         'assets': assets,
         'screen': screen,
+        'level': level,
     }
 
     pygame.key.set_repeat(5, 90)
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                player.handle_key(event.key, level)
+    return context
 
-        screen.fill((0, 0, 0))
-        level.draw(context)
-        player.draw(context)
-        pygame.display.flip()
+def gameloop(ctx):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            ctx['level']['player'].handle_key(event.key, ctx['level']['matrix'])
+
+    ctx['screen'].fill((0, 0, 0))
+    ctx['level']['matrix'].draw(context)
+    ctx['level']['player'].draw(context)
+    pygame.display.flip()
 
 
-init()
+context = init()
+while True:
+    gameloop(context)
