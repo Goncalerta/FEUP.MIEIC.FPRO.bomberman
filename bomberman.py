@@ -13,6 +13,9 @@ import math
 import time
 pygame.init()
 
+def snap_coordinates(x, y):
+    return round(x/50)*50, round(y/50)*50
+
 
 class Block(Enum):
     GRASS = 0
@@ -97,7 +100,7 @@ class Player:
 
     def check_key_place_bomb(self, key, lvl):
         if key == self.controls['place_bomb']:
-            lvl['bombs'].append(Bomb(self.pos[0], self.pos[1]))
+            lvl['bombs'].append(Bomb(*snap_coordinates(*self.pos)))
 
     def handle_key(self, key, lvl):
         self.check_key_move(key, lvl)
