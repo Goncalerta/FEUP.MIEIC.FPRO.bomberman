@@ -31,6 +31,28 @@ class Block(Enum):
         ctx['screen'].blit(img, (x, y))
 
 
+class Bomb:
+    def __init__(self, x, y, timer=200, radius=3):
+        self.pos = [x, y]
+        self.timer = timer
+        self.radius = radius
+    
+    def loop(self, ctx):
+        self.draw(ctx)
+        self.timer -= 1
+        if self.timer <= 0:
+            self.detonate(ctx)
+    
+    def detonate(self, ctx):
+        ctx['level']['bombs'].remove(self)
+
+    def draw(self, ctx):
+        assets = ctx['assets']
+        img = assets['bomb']
+
+        ctx['screen'].blit(img, self.pos)
+
+
 class Player:
     def __init__(self, x, y, controls):
         self.pos = [x, y]
@@ -50,7 +72,7 @@ class Player:
 
         ctx['screen'].blit(img, self.pos)
         
-    def handle_key(self, key, lvl):
+    def check_key_move(self, key, lvl):
         new_pos = self.pos[:]
 
         if key == self.controls['up']:
@@ -65,10 +87,21 @@ class Player:
         elif key == self.controls['right']:
             new_pos[0] += 10
             new_direction = 'right'
+        else:
+            return
         
-        if not lvl.check_collides(*new_pos):
+        if not lvl['matrix'].check_collides(*new_pos):
             self.pos = new_pos
             self.direction = new_direction
+
+    def check_key_place_bomb(self, key, lvl):
+        if key == self.controls['place_bomb']:
+            lvl['bombs'].append(Bomb(self.pos[0], self.pos[1]))
+
+    def handle_key(self, key, lvl):
+        self.check_key_move(key, lvl)
+        self.check_key_place_bomb(key, lvl)
+
 
 class BlockMatrix:
     def __init__(self, matrix=None, goal=None):
@@ -127,6 +160,9 @@ def init():
         'player_left': pygame.image.load('assets/player_left.png'),
         'player_right': pygame.image.load('assets/player_right.png'),
         'bomb': pygame.image.load('assets/bomb.png'),
+        'flame_center': pygame.image.load('assets/explosion_center.png'),
+        'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
+        'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
     }
 
     controls = {
@@ -161,11 +197,13 @@ def gameloop(ctx):
         if event.type == pygame.QUIT:
             sys.exit()
         if event.type == pygame.KEYDOWN:
-            ctx['level']['player'].handle_key(event.key, ctx['level']['matrix'])
+            ctx['level']['player'].handle_key(event.key, ctx['level'])
 
     ctx['screen'].fill((0, 0, 0))
-    ctx['level']['matrix'].draw(context)
-    ctx['level']['player'].draw(context)
+    ctx['level']['matrix'].draw(ctx)
+    ctx['level']['player'].draw(ctx)
+    for bomb in ctx['level']['bombs']:
+        bomb.loop(ctx)
     pygame.display.flip()
 
 
