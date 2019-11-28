@@ -51,7 +51,7 @@ class Bomb:
     def detonate(self, ctx):
         x, y = self.pos
         flames_list = ctx['level']['flames']
-        flame = Flame(x, y, flames_list, self.radius, time.process_time())
+        flame = CenterFlame(x, y, flames_list, self.radius, time.process_time())
         flames_list.append(flame)
         ctx['level']['bombs'].remove(self)
 
@@ -63,48 +63,71 @@ class Bomb:
 
 
 class Flame:
-    def __init__(self, x, y, flames_list, radius, place_time, timer=1, alignment='center', positive_direction=None):
+    def __init__(self, x, y, place_time, timer=1):
         self.pos = [x, y]
         self.timer = timer
-        self.radius = radius
-        self.alignment = alignment
         self.place_time = place_time
-
-        if radius > 1:
-            if alignment == 'center':
-                l = Flame(x-50, y, flames_list, radius-1, place_time, timer, alignment='horizontal', positive_direction=False)
-                r = Flame(x+50, y, flames_list, radius-1, place_time, timer, alignment='horizontal', positive_direction=True)
-                u = Flame(x, y-50, flames_list, radius-1, place_time, timer, alignment='vertical', positive_direction=False)
-                d = Flame(x, y+50, flames_list, radius-1, place_time, timer, alignment='vertical', positive_direction=True)
-                flames_list += [l, r, u, d]
-            elif alignment == 'horizontal':
-                if positive_direction:
-                    nx = x+50
-                else:
-                    nx = x-50
-                flame = Flame(nx, y, flames_list, radius-1, place_time, timer, alignment='horizontal', positive_direction=positive_direction)
-                flames_list.append(flame)
-            elif alignment == 'vertical':
-                if positive_direction:
-                    ny = y+50
-                else:
-                    ny = y-50
-                flame = Flame(x, ny, flames_list, radius-1, place_time, timer, alignment='vertical', positive_direction=positive_direction)
-                flames_list.append(flame)
     
     def loop(self, ctx):
         self.draw(ctx)
         if time.process_time() - self.place_time >= self.timer:
             ctx['level']['flames'].remove(self)
 
+    # Defined in children classes
+    def draw(self, ctx):
+        pass
+
+
+class CenterFlame(Flame):
+    def __init__(self, x, y, flames_list, radius, place_time, timer=1):
+        super().__init__(x, y, place_time, timer)
+        
+        if radius > 1:
+            l = HorizontalFlame(x-50, y, flames_list, radius-1, place_time, timer, False)
+            r = HorizontalFlame(x+50, y, flames_list, radius-1, place_time, timer, True)
+            u = VerticalFlame(x, y-50, flames_list, radius-1, place_time, timer, False)
+            d = VerticalFlame(x, y+50, flames_list, radius-1, place_time, timer, True)
+            flames_list += [l, r, u, d]
+
     def draw(self, ctx):
         assets = ctx['assets']
-        if self.alignment == 'center':
-            img = assets['flame_center']
-        elif self.alignment == 'horizontal':
-            img = assets['flame_horizontal']
-        elif self.alignment == 'vertical':
-            img = assets['flame_vertical']
+        img = assets['flame_center']
+
+        ctx['screen'].blit(img, self.pos)
+
+class HorizontalFlame(Flame):
+    def __init__(self, x, y, flames_list, radius, place_time, timer, left_to_right):
+        super().__init__(x, y, place_time, timer)
+
+        if radius > 1:
+            if left_to_right:
+                nx = x+50
+            else:
+                nx = x-50
+            flame = HorizontalFlame(nx, y, flames_list, radius-1, place_time, timer, left_to_right)
+            flames_list.append(flame)
+
+    def draw(self, ctx):
+        assets = ctx['assets']
+        img = assets['flame_horizontal']
+
+        ctx['screen'].blit(img, self.pos)
+
+class VerticalFlame(Flame):
+    def __init__(self, x, y, flames_list, radius, place_time, timer, up_to_down):
+        super().__init__(x, y, place_time, timer)
+
+        if radius > 1:
+            if up_to_down:
+                ny = y+50
+            else:
+                ny = y-50
+            flame = VerticalFlame(x, ny, flames_list, radius-1, place_time, timer, up_to_down)
+            flames_list.append(flame)
+
+    def draw(self, ctx):
+        assets = ctx['assets']
+        img = assets['flame_vertical']
 
         ctx['screen'].blit(img, self.pos)
 
