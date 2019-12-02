@@ -31,6 +31,7 @@ class Block(Enum):
             Block.WALL: 'wall',
             Block.BOX: 'box',
             Block.BOX_GOAL: 'box',
+            Block.GOAL: 'goal',
         }
         img = ctx['assets'][assets_indexes[self]]
         ctx['screen'].blit(img, (x, y))
@@ -51,7 +52,7 @@ class Bomb:
     def detonate(self, ctx):
         x, y = self.pos
         flames_list = ctx['level']['flames']
-        flame = CenterFlame(x, y, flames_list, self.radius, time.process_time())
+        flame = CenterFlame(ctx, x, y, flames_list, self.radius, time.process_time())
         flames_list.append(flame)
         ctx['level']['bombs'].remove(self)
 
@@ -73,21 +74,37 @@ class Flame:
         if time.process_time() - self.place_time >= self.timer:
             ctx['level']['flames'].remove(self)
 
+    def affects_environment(self, ctx):
+        x = self.pos[0]//50
+        y = self.pos[1]//50
+        matrix = ctx['level']['matrix'].matrix
+        if not (0 <= x <= len(matrix[0]) and 0 <= y <= len(matrix)):
+            return False
+        block = matrix[y][x]
+        if block in [Block.GRASS, Block.GOAL]:
+            return False
+        if block == Block.BOX:
+            matrix[y][x] = Block.GRASS
+        elif block == Block.BOX_GOAL:
+            matrix[y][x] = Block.GOAL
+        return True
+
     # Defined in children classes
     def draw(self, ctx):
         pass
 
 
 class CenterFlame(Flame):
-    def __init__(self, x, y, flames_list, radius, place_time, timer=1):
+    def __init__(self, ctx, x, y, flames_list, radius, place_time, timer=1):
         super().__init__(x, y, place_time, timer)
         
-        if radius > 1:
-            l = HorizontalFlame(x-50, y, flames_list, radius-1, place_time, timer, False)
-            r = HorizontalFlame(x+50, y, flames_list, radius-1, place_time, timer, True)
-            u = VerticalFlame(x, y-50, flames_list, radius-1, place_time, timer, False)
-            d = VerticalFlame(x, y+50, flames_list, radius-1, place_time, timer, True)
-            flames_list += [l, r, u, d]
+        if radius > 1 and not self.affects_environment(ctx):
+            l = HorizontalFlame(ctx, x-50, y, flames_list, radius-1, place_time, timer, False)
+            r = HorizontalFlame(ctx, x+50, y, flames_list, radius-1, place_time, timer, True)
+            u = VerticalFlame(ctx, x, y-50, flames_list, radius-1, place_time, timer, False)
+            d = VerticalFlame(ctx, x, y+50, flames_list, radius-1, place_time, timer, True)
+            new_flames = [l, r, u, d]
+            flames_list += [f for f in new_flames if not f.affects_environment(ctx)]
 
     def draw(self, ctx):
         assets = ctx['assets']
@@ -96,16 +113,17 @@ class CenterFlame(Flame):
         ctx['screen'].blit(img, self.pos)
 
 class HorizontalFlame(Flame):
-    def __init__(self, x, y, flames_list, radius, place_time, timer, left_to_right):
+    def __init__(self, ctx, x, y, flames_list, radius, place_time, timer, left_to_right):
         super().__init__(x, y, place_time, timer)
 
-        if radius > 1:
+        if radius > 1 and not self.affects_environment(ctx):
             if left_to_right:
                 nx = x+50
             else:
                 nx = x-50
-            flame = HorizontalFlame(nx, y, flames_list, radius-1, place_time, timer, left_to_right)
-            flames_list.append(flame)
+            flame = HorizontalFlame(ctx, nx, y, flames_list, radius-1, place_time, timer, left_to_right)
+            if not flame.affects_environment(ctx):
+                flames_list.append(flame)
 
     def draw(self, ctx):
         assets = ctx['assets']
@@ -114,16 +132,17 @@ class HorizontalFlame(Flame):
         ctx['screen'].blit(img, self.pos)
 
 class VerticalFlame(Flame):
-    def __init__(self, x, y, flames_list, radius, place_time, timer, up_to_down):
+    def __init__(self, ctx, x, y, flames_list, radius, place_time, timer, up_to_down):
         super().__init__(x, y, place_time, timer)
 
-        if radius > 1:
+        if radius > 1 and not self.affects_environment(ctx):
             if up_to_down:
                 ny = y+50
             else:
                 ny = y-50
-            flame = VerticalFlame(x, ny, flames_list, radius-1, place_time, timer, up_to_down)
-            flames_list.append(flame)
+            flame = VerticalFlame(ctx, x, ny, flames_list, radius-1, place_time, timer, up_to_down)
+            if not flame.affects_environment(ctx):
+                flames_list.append(flame)
 
     def draw(self, ctx):
         assets = ctx['assets']
@@ -258,6 +277,8 @@ def init():
         'bombs': [],
         'flames': [],
     }
+    
+    level['matrix'].matrix[7][7] = Block.BOX
 
     context = {
         'size': size,
