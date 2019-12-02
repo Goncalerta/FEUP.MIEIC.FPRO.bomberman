@@ -17,6 +17,10 @@ pygame.init()
 def snap_coordinates(x, y):
     return round(x/50)*50, round(y/50)*50
 
+def list_colliding_coordinates(x, y):
+    x = x/50
+    y = y/50
+    return math.floor(x), math.ceil(x), math.floor(y), math.ceil(y)
 
 class Block(Enum):
     GRASS = 0
@@ -48,6 +52,10 @@ class Bomb:
         self.draw(ctx)
         if time.process_time() - self.place_time >= self.timer:
             self.detonate(ctx)
+    
+    def collides(self, x, y):
+        xl, xh, yl, yh = list_colliding_coordinates(x, y)
+        return xl <= self.pos[0]//50 <= xh and yl <= self.pos[1]//50 <= yh
     
     def detonate(self, ctx):
         x, y = self.pos
@@ -88,7 +96,11 @@ class Flame:
         elif block == Block.BOX_GOAL:
             matrix[y][x] = Block.GOAL
         return True
-
+    
+    def collides(self, x, y):
+        xl, xh, yl, yh = list_colliding_coordinates(x, y)
+        return xl <= self.pos[0]//50 <= xh and yl <= self.pos[1]//50 <= yh
+    
     # Defined in children classes
     def draw(self, ctx):
         pass
@@ -157,6 +169,16 @@ class Player:
         self.direction = 'down'
         self.controls = controls
 
+    def loop(self, ctx):
+        self.draw(ctx)
+        
+        for f in ctx['level']['flames']:
+            if f.collides(*self.pos):
+                self.die()
+                
+    def die(self):
+        print("PLAYER DIED PLACEHOLDER")
+        
     def draw(self, ctx):
         assets = ctx['assets']
         if self.direction == 'up':
@@ -188,9 +210,14 @@ class Player:
         else:
             return
         
-        if not lvl['matrix'].check_collides(*new_pos):
-            self.pos = new_pos
-            self.direction = new_direction
+        if lvl['matrix'].check_collides(*new_pos):
+            return
+        
+        for bomb in lvl['bombs']:
+            if bomb.collides(*new_pos) and not bomb.collides(*self.pos):
+                return
+        self.pos = new_pos
+        self.direction = new_direction
 
     def check_key_place_bomb(self, key, lvl):
         if key == self.controls['place_bomb']:
@@ -237,9 +264,7 @@ class BlockMatrix:
         return self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
     
     def check_collides(self, x, y):
-        x = x/50
-        y = y/50
-        xl, xh, yl, yh = math.floor(x), math.ceil(x), math.floor(y), math.ceil(y)
+        xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return self.is_solid(xl, yl) or self.is_solid(xl, yh) or self.is_solid(xh, yl) or self.is_solid(xh, yh)
 
 
@@ -301,7 +326,7 @@ def gameloop(ctx):
 
     ctx['screen'].fill((0, 0, 0))
     ctx['level']['matrix'].draw(ctx)
-    ctx['level']['player'].draw(ctx)
+    ctx['level']['player'].loop(ctx)
     for bomb in ctx['level']['bombs']:
         bomb.loop(ctx)
     for flame in ctx['level']['flames']:
