@@ -61,7 +61,7 @@ class Block(Enum):
 
 class Bomb:
     def __init__(self, x, y, placer, radius=3, timer=3):
-        self.pos = [x, y]
+        self.pos = (x, y)
         self.timer = timer
         self.radius = radius
         self.place_time = time.process_time()
@@ -81,7 +81,7 @@ class Bomb:
         flames_list = lvl.flames
         flame = CenterFlame(lvl, x, y, flames_list, self.radius, time.process_time())
         flames_list.append(flame)
-        lvl.bombs.remove(self)
+        lvl.bombs[self.pos] = None
 
     def draw(self, canvas):
         canvas.draw(ASSETS['bomb'], self.pos)
@@ -220,7 +220,7 @@ class Player:
         if lvl.matrix.check_collides(*new_pos):
             return
         
-        for bomb in lvl.bombs:
+        for bomb in lvl.bombs.values():
             if bomb.collides(*new_pos) and not bomb.collides(*self.pos):
                 return
         self.pos = new_pos
@@ -229,7 +229,7 @@ class Player:
     def handle_key(self, key, lvl):
         if key == self.controls['place_bomb']:
             if lvl.placed_bombs(self) < self.max_bombs:
-                lvl.place_bomb(*self.pos, self)
+                lvl.try_place_bomb(*self.pos, self)
         self.check_key_move(key, lvl)
 
 
@@ -269,7 +269,6 @@ class BlockMatrix:
         return self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
     
     def check_collides(self, x, y):
-        print(x, y)
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return self.is_solid(xl, yl) or self.is_solid(xl, yh) or self.is_solid(xh, yl) or self.is_solid(xh, yh)
 
@@ -290,7 +289,7 @@ class Level:
         self.canvas = canvas
         self.matrix = matrix
         self.players = players
-        self.bombs = []
+        self.bombs = {}
         self.flames = []
         self.enemies = []
 
@@ -298,8 +297,12 @@ class Level:
         self.matrix.draw(self.canvas)
         for player in self.players:
             player.loop(self)
-        for bomb in self.bombs:
+        for bomb in self.bombs.values():
             bomb.loop(self)
+        # Remove items that have a None value
+        for k in list(self.bombs.keys()):
+            if self.bombs[k] == None:
+                del self.bombs[k]
         for flame in self.flames:
             flame.loop(self)
         for enemy in self.enemies:
@@ -309,12 +312,14 @@ class Level:
         for player in self.players:
             player.handle_key(key, self)
 
-    def place_bomb(self, x, y, placer):
-        self.bombs.append(Bomb(round(x), round(y), placer))
+    def try_place_bomb(self, x, y, placer):
+        pos = round(x), round(y)
+        if pos not in self.bombs:
+            self.bombs[pos] = Bomb(*pos, placer)
 
     def placed_bombs(self, player):
         count = 0
-        for bomb in self.bombs:
+        for bomb in self.bombs.values():
             if bomb.placer == player:
                 count += 1
         return count
@@ -322,7 +327,7 @@ class Level:
 
 class Game:
     def __init__(self, screen):
-        # TODO Make these attributes more generic
+        # TODO Don't hardcode level layout
         matrix = BlockMatrix(goal=(5, 3))
         matrix.matrix[7][7] = Block.BOX
         players = [Player(1, 1)]
