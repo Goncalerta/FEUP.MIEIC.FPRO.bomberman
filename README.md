@@ -36,13 +36,13 @@ e podem matar o próprio jogador, se ele estiver na zona de explosão.
    1. ~~desenhar jogador nas coordenadas dele~~
    1. ~~teclas para movimentar~~
 1. **BOMBA**
-   1. duas listas: posição bombas, tempos bombas
-   1. quando algum tempo for menor que 0, dentro dum `raio_bomba=3`:
-      1. se for caixa, desaparece
-      1. se for caixa especial, mostra porta
-      1. caso contrário, adiciona uma chama (flame)
-         * as chamas são controladas por duas listas: posição e tempos chamas (flames)
-   1. desenhar chamas
+   1. ~~duas listas: posição bombas, tempos bombas~~
+   1. ~~quando algum tempo for menor que 0, dentro dum `raio_bomba=3`:~~
+      1. ~~se for caixa, desaparece~~
+      1. ~~se for caixa especial, mostra porta~~
+      1. ~~caso contrário, adiciona uma chama (flame)~~
+         * ~~as chamas são controladas por duas listas: posição e tempos chamas (flames)~~
+   1. ~~desenhar chamas~~
    1. se jogador toca na chama, perde vida e volta à posição inicial
    1. se jogador toca na porta, avança nível
 1. **INIMIGOS**
