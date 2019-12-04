@@ -29,12 +29,15 @@ ASSETS = {
     'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
 }
 
-def snap_coordinates(x, y):
-    return round(x/50)*50, round(y/50)*50
+DEFAULT_P1CONTROLS = {
+    'up': pygame.K_UP,
+    'down': pygame.K_DOWN,
+    'left': pygame.K_LEFT,
+    'right': pygame.K_RIGHT,
+    'place_bomb': pygame.K_SPACE,
+}
 
 def list_colliding_coordinates(x, y):
-    x = x/50
-    y = y/50
     return math.floor(x), math.ceil(x), math.floor(y), math.ceil(y)
 
 class Block(Enum):
@@ -44,7 +47,7 @@ class Block(Enum):
     BOX_GOAL = 3
     GOAL = 4
 
-    def draw(self, ctx, x, y):
+    def draw(self, canvas, x, y):
         assets_indexes = {
             Block.GRASS: 'grass',
             Block.WALL: 'wall',
@@ -53,7 +56,7 @@ class Block(Enum):
             Block.GOAL: 'goal',
         }
         img = ASSETS[assets_indexes[self]]
-        ctx['screen'].blit(img, (x, y))
+        canvas.draw(img, (x, y))
 
 
 class Bomb:
@@ -63,26 +66,24 @@ class Bomb:
         self.radius = radius
         self.place_time = time.process_time()
     
-    def loop(self, ctx):
-        self.draw(ctx)
+    def loop(self, lvl):
+        self.draw(lvl.canvas)
         if time.process_time() - self.place_time >= self.timer:
-            self.detonate(ctx)
+            self.detonate(lvl)
     
     def collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
-        return xl <= self.pos[0]//50 <= xh and yl <= self.pos[1]//50 <= yh
+        return xl <= self.pos[0] <= xh and yl <= self.pos[1] <= yh
     
-    def detonate(self, ctx):
+    def detonate(self, lvl):
         x, y = self.pos
-        flames_list = ctx['level']['flames']
-        flame = CenterFlame(ctx, x, y, flames_list, self.radius, time.process_time())
+        flames_list = lvl.flames
+        flame = CenterFlame(lvl, x, y, flames_list, self.radius, time.process_time())
         flames_list.append(flame)
-        ctx['level']['bombs'].remove(self)
+        lvl.bombs.remove(self)
 
-    def draw(self, ctx):
-        img = ASSETS['bomb']
-
-        ctx['screen'].blit(img, self.pos)
+    def draw(self, canvas):
+        canvas.draw(ASSETS['bomb'], self.pos)
 
 
 class Flame:
@@ -91,15 +92,15 @@ class Flame:
         self.timer = timer
         self.place_time = place_time
     
-    def loop(self, ctx):
-        self.draw(ctx)
+    def loop(self, lvl):
+        self.draw(lvl.canvas)
         if time.process_time() - self.place_time >= self.timer:
-            ctx['level']['flames'].remove(self)
+            lvl.flames.remove(self)
 
-    def affects_environment(self, ctx):
-        x = self.pos[0]//50
-        y = self.pos[1]//50
-        matrix = ctx['level']['matrix'].matrix
+    def affects_environment(self, lvl):
+        x = self.pos[0]
+        y = self.pos[1]
+        matrix = lvl.matrix.matrix
         if not (0 <= x <= len(matrix[0]) and 0 <= y <= len(matrix)):
             return False
         block = matrix[y][x]
@@ -113,47 +114,43 @@ class Flame:
     
     def collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
-        return xl <= self.pos[0]//50 <= xh and yl <= self.pos[1]//50 <= yh
+        return xl <= self.pos[0] <= xh and yl <= self.pos[1] <= yh
     
-    # Defined in children classes
-    def draw(self, ctx):
+    # Abstract method to be defined in children classes
+    def draw(self, canvas):
         pass
 
 
 class CenterFlame(Flame):
-    def __init__(self, ctx, x, y, flames_list, radius, place_time, timer=1):
+    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer=1):
         super().__init__(x, y, place_time, timer)
         
-        if radius > 1 and not self.affects_environment(ctx):
-            l = HorizontalFlame(ctx, x-50, y, flames_list, radius-1, place_time, timer, False)
-            r = HorizontalFlame(ctx, x+50, y, flames_list, radius-1, place_time, timer, True)
-            u = VerticalFlame(ctx, x, y-50, flames_list, radius-1, place_time, timer, False)
-            d = VerticalFlame(ctx, x, y+50, flames_list, radius-1, place_time, timer, True)
+        if radius > 1 and not self.affects_environment(lvl):
+            l = HorizontalFlame(lvl, x-1, y, flames_list, radius-1, place_time, timer, False)
+            r = HorizontalFlame(lvl, x+1, y, flames_list, radius-1, place_time, timer, True)
+            u = VerticalFlame(lvl, x, y-1, flames_list, radius-1, place_time, timer, False)
+            d = VerticalFlame(lvl, x, y+1, flames_list, radius-1, place_time, timer, True)
             new_flames = [l, r, u, d]
-            flames_list += [f for f in new_flames if not f.affects_environment(ctx)]
+            flames_list += [f for f in new_flames if not f.affects_environment(lvl)]
 
-    def draw(self, ctx):
-        img = ASSETS['flame_center']
-
-        ctx['screen'].blit(img, self.pos)
+    def draw(self, canvas):
+        canvas.draw(ASSETS['flame_center'], self.pos)
 
 class HorizontalFlame(Flame):
-    def __init__(self, ctx, x, y, flames_list, radius, place_time, timer, left_to_right):
+    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer, left_to_right):
         super().__init__(x, y, place_time, timer)
 
-        if radius > 1 and not self.affects_environment(ctx):
+        if radius > 1 and not self.affects_environment(lvl):
             if left_to_right:
-                nx = x+50
+                nx = x+1
             else:
-                nx = x-50
-            flame = HorizontalFlame(ctx, nx, y, flames_list, radius-1, place_time, timer, left_to_right)
-            if not flame.affects_environment(ctx):
+                nx = x-1
+            flame = HorizontalFlame(lvl, nx, y, flames_list, radius-1, place_time, timer, left_to_right)
+            if not flame.affects_environment(lvl):
                 flames_list.append(flame)
 
-    def draw(self, ctx):
-        img = ASSETS['flame_horizontal']
-
-        ctx['screen'].blit(img, self.pos)
+    def draw(self, canvas):
+        canvas.draw(ASSETS['flame_horizontal'], self.pos)
 
 class VerticalFlame(Flame):
     def __init__(self, ctx, x, y, flames_list, radius, place_time, timer, up_to_down):
@@ -161,36 +158,34 @@ class VerticalFlame(Flame):
 
         if radius > 1 and not self.affects_environment(ctx):
             if up_to_down:
-                ny = y+50
+                ny = y+1
             else:
-                ny = y-50
+                ny = y-1
             flame = VerticalFlame(ctx, x, ny, flames_list, radius-1, place_time, timer, up_to_down)
             if not flame.affects_environment(ctx):
                 flames_list.append(flame)
 
-    def draw(self, ctx):
-        img = ASSETS['flame_vertical']
-
-        ctx['screen'].blit(img, self.pos)
+    def draw(self, canvas):
+        canvas.draw(ASSETS['flame_vertical'], self.pos)
 
 
 class Player:
-    def __init__(self, x, y, controls):
+    def __init__(self, x, y, controls=DEFAULT_P1CONTROLS):
         self.pos = [x, y]
         self.direction = 'down'
         self.controls = controls
 
-    def loop(self, ctx):
-        self.draw(ctx)
+    def loop(self, lvl):
+        self.draw(lvl.canvas)
         
-        for f in ctx['level']['flames']:
+        for f in lvl.flames:
             if f.collides(*self.pos):
                 self.die()
                 
     def die(self):
         print("PLAYER DIED PLACEHOLDER")
         
-    def draw(self, ctx):
+    def draw(self, canvas):
         if self.direction == 'up':
             img = ASSETS['player_up']
         elif self.direction == 'down':
@@ -200,42 +195,39 @@ class Player:
         elif self.direction == 'right':
             img = ASSETS['player_right']
 
-        ctx['screen'].blit(img, self.pos)
+        canvas.draw(img, self.pos)
         
     def check_key_move(self, key, lvl):
         new_pos = self.pos[:]
 
         if key == self.controls['up']:
-            new_pos[1] -= 10
+            new_pos[1] -= 0.125
             new_direction = 'up'
         elif key == self.controls['down']:
-            new_pos[1] += 10
+            new_pos[1] += 0.125
             new_direction = 'down'
         elif key == self.controls['left']:
-            new_pos[0] -= 10
+            new_pos[0] -= 0.125
             new_direction = 'left'
         elif key == self.controls['right']:
-            new_pos[0] += 10
+            new_pos[0] += 0.125
             new_direction = 'right'
         else:
             return
         
-        if lvl['matrix'].check_collides(*new_pos):
+        if lvl.matrix.check_collides(*new_pos):
             return
         
-        for bomb in lvl['bombs']:
+        for bomb in lvl.bombs:
             if bomb.collides(*new_pos) and not bomb.collides(*self.pos):
                 return
         self.pos = new_pos
         self.direction = new_direction
 
-    def check_key_place_bomb(self, key, lvl):
-        if key == self.controls['place_bomb']:
-            lvl['bombs'].append(Bomb(*snap_coordinates(*self.pos)))
-
     def handle_key(self, key, lvl):
+        if key == self.controls['place_bomb']:
+            lvl.place_bomb(*self.pos)
         self.check_key_move(key, lvl)
-        self.check_key_place_bomb(key, lvl)
 
 
 class BlockMatrix:
@@ -265,70 +257,101 @@ class BlockMatrix:
             x, y = goal
             self.matrix[y][x] = Block.BOX_GOAL
 
-    def draw(self, ctx):
+    def draw(self, canvas):
         for i, row in enumerate(self.matrix):
             for j, block in enumerate(row):
-                block.draw(ctx, j*50, i*50)
+                block.draw(canvas, j, i)
 
     def is_solid(self, x, y):
         return self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
     
     def check_collides(self, x, y):
+        print(x, y)
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return self.is_solid(xl, yl) or self.is_solid(xl, yh) or self.is_solid(xh, yl) or self.is_solid(xh, yh)
 
-
-def init():
-    size = 650, 650
-    speed = [2, 2]
-
-    screen = pygame.display.set_mode(size)
-
-    controls = {
-        'up': pygame.K_UP,
-        'down': pygame.K_DOWN,
-        'left': pygame.K_LEFT,
-        'right': pygame.K_RIGHT,
-        'place_bomb': pygame.K_SPACE,
-    }
-
-    level = {
-        'matrix': BlockMatrix(goal=(5, 3)),
-        'player': Player(50, 50, controls),
-        'bombs': [],
-        'flames': [],
-    }
+class LevelCanvas:
+    def __init__(self, screen, pos, scale=50):
+        self.screen = screen
+        self.pos = pos
+        self.scale = scale
     
-    level['matrix'].matrix[7][7] = Block.BOX
-
-    context = {
-        'size': size,
-        'speed': speed,
-        'screen': screen,
-        'level': level,
-    }
-
-    pygame.key.set_repeat(5, 90)
-
-    return context
-
-def gameloop(ctx):
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sys.exit()
-        if event.type == pygame.KEYDOWN:
-            ctx['level']['player'].handle_key(event.key, ctx['level'])
-
-    ctx['screen'].fill((0, 0, 0))
-    ctx['level']['matrix'].draw(ctx)
-    ctx['level']['player'].loop(ctx)
-    for bomb in ctx['level']['bombs']:
-        bomb.loop(ctx)
-    for flame in ctx['level']['flames']:
-        flame.loop(ctx)
-    pygame.display.flip()
+    def draw(self, img, pos):
+        x = pos[0]*self.scale + self.pos[0]
+        y = pos[1]*self.scale + self.pos[1]
+        self.screen.blit(img, (x, y))
 
 
-context = init()
-while True:
-    gameloop(context)
+class Level:
+    def __init__(self, canvas, matrix, players):
+        self.canvas = canvas
+        self.matrix = matrix
+        self.players = players
+        self.bombs = []
+        self.flames = []
+        self.enemies = []
+
+    def loop(self):
+        self.matrix.draw(self.canvas)
+        for player in self.players:
+            player.loop(self)
+        for bomb in self.bombs:
+            bomb.loop(self)
+        for flame in self.flames:
+            flame.loop(self)
+        for enemy in self.enemies:
+            enemy.loop(self)
+
+    def handle_key(self, key):
+        for player in self.players:
+            player.handle_key(key, self)
+
+    def place_bomb(self, x, y):
+        self.bombs.append(Bomb(round(x), round(y)))
+        
+
+class Game:
+    def __init__(self, screen):
+        # TODO Make these attributes more generic
+        matrix = BlockMatrix(goal=(5, 3))
+        matrix.matrix[7][7] = Block.BOX
+        players = [Player(1, 1)]
+
+        canvas = LevelCanvas(screen, (0, 100))
+        self.level = Level(canvas, matrix, players)
+    
+    def loop(self):
+        self.level.loop()
+
+    def handle_key(self, key):
+        self.level.handle_key(key)
+        
+
+
+class Context:
+    def __init__(self):
+        self.size = 650, 750
+        self.speed = [2, 2]
+        self.screen = pygame.display.set_mode(self.size)
+        self.game = Game(self.screen)
+
+        pygame.key.set_repeat(5, 90)
+
+
+    def loop(self):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    self.game.handle_key(event.key)
+
+            self.screen.fill((140, 140, 140))
+            # if self.menu.is_open:
+            #     self.menu.draw()
+            # else:
+            self.game.loop()
+            
+            pygame.display.flip()
+
+Context().loop()
