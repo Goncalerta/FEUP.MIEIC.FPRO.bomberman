@@ -60,11 +60,12 @@ class Block(Enum):
 
 
 class Bomb:
-    def __init__(self, x, y, radius=3, timer=3):
+    def __init__(self, x, y, placer, radius=3, timer=3):
         self.pos = [x, y]
         self.timer = timer
         self.radius = radius
         self.place_time = time.process_time()
+        self.placer = placer
     
     def loop(self, lvl):
         self.draw(lvl.canvas)
@@ -170,10 +171,11 @@ class VerticalFlame(Flame):
 
 
 class Player:
-    def __init__(self, x, y, controls=DEFAULT_P1CONTROLS):
+    def __init__(self, x, y, controls=DEFAULT_P1CONTROLS, max_bombs=1):
         self.pos = [x, y]
         self.direction = 'down'
         self.controls = controls
+        self.max_bombs = max_bombs
 
     def loop(self, lvl):
         self.draw(lvl.canvas)
@@ -226,7 +228,8 @@ class Player:
 
     def handle_key(self, key, lvl):
         if key == self.controls['place_bomb']:
-            lvl.place_bomb(*self.pos)
+            if lvl.placed_bombs(self) < self.max_bombs:
+                lvl.place_bomb(*self.pos, self)
         self.check_key_move(key, lvl)
 
 
@@ -306,8 +309,15 @@ class Level:
         for player in self.players:
             player.handle_key(key, self)
 
-    def place_bomb(self, x, y):
-        self.bombs.append(Bomb(round(x), round(y)))
+    def place_bomb(self, x, y, placer):
+        self.bombs.append(Bomb(round(x), round(y), placer))
+
+    def placed_bombs(self, player):
+        count = 0
+        for bomb in self.bombs:
+            if bomb.placer == player:
+                count += 1
+        return count
         
 
 class Game:
