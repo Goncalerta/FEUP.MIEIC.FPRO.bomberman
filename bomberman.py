@@ -14,6 +14,21 @@ import time
 pygame.init()
 
 
+ASSETS = {
+    'grass': pygame.image.load('assets/grass.png'),
+    'wall': pygame.image.load('assets/wall.png'),
+    'box': pygame.image.load('assets/box.png'),
+    'goal': pygame.image.load('assets/goal.png'),
+    'player_up': pygame.image.load('assets/player_up.png'),
+    'player_down': pygame.image.load('assets/player_down.png'),
+    'player_left': pygame.image.load('assets/player_left.png'),
+    'player_right': pygame.image.load('assets/player_right.png'),
+    'bomb': pygame.image.load('assets/bomb.png'),
+    'flame_center': pygame.image.load('assets/explosion_center.png'),
+    'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
+    'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
+}
+
 def snap_coordinates(x, y):
     return round(x/50)*50, round(y/50)*50
 
@@ -37,7 +52,7 @@ class Block(Enum):
             Block.BOX_GOAL: 'box',
             Block.GOAL: 'goal',
         }
-        img = ctx['assets'][assets_indexes[self]]
+        img = ASSETS[assets_indexes[self]]
         ctx['screen'].blit(img, (x, y))
 
 
@@ -65,8 +80,7 @@ class Bomb:
         ctx['level']['bombs'].remove(self)
 
     def draw(self, ctx):
-        assets = ctx['assets']
-        img = assets['bomb']
+        img = ASSETS['bomb']
 
         ctx['screen'].blit(img, self.pos)
 
@@ -119,8 +133,7 @@ class CenterFlame(Flame):
             flames_list += [f for f in new_flames if not f.affects_environment(ctx)]
 
     def draw(self, ctx):
-        assets = ctx['assets']
-        img = assets['flame_center']
+        img = ASSETS['flame_center']
 
         ctx['screen'].blit(img, self.pos)
 
@@ -138,8 +151,7 @@ class HorizontalFlame(Flame):
                 flames_list.append(flame)
 
     def draw(self, ctx):
-        assets = ctx['assets']
-        img = assets['flame_horizontal']
+        img = ASSETS['flame_horizontal']
 
         ctx['screen'].blit(img, self.pos)
 
@@ -157,8 +169,7 @@ class VerticalFlame(Flame):
                 flames_list.append(flame)
 
     def draw(self, ctx):
-        assets = ctx['assets']
-        img = assets['flame_vertical']
+        img = ASSETS['flame_vertical']
 
         ctx['screen'].blit(img, self.pos)
 
@@ -180,15 +191,14 @@ class Player:
         print("PLAYER DIED PLACEHOLDER")
         
     def draw(self, ctx):
-        assets = ctx['assets']
         if self.direction == 'up':
-            img = assets['player_up']
+            img = ASSETS['player_up']
         elif self.direction == 'down':
-            img = assets['player_down']
+            img = ASSETS['player_down']
         elif self.direction == 'left':
-            img = assets['player_left']
+            img = ASSETS['player_left']
         elif self.direction == 'right':
-            img = assets['player_right']
+            img = ASSETS['player_right']
 
         ctx['screen'].blit(img, self.pos)
         
@@ -273,20 +283,6 @@ def init():
     speed = [2, 2]
 
     screen = pygame.display.set_mode(size)
-    assets = {
-        'grass': pygame.image.load('assets/grass.png'),
-        'wall': pygame.image.load('assets/wall.png'),
-        'box': pygame.image.load('assets/box.png'),
-        'goal': pygame.image.load('assets/goal.png'),
-        'player_up': pygame.image.load('assets/player_up.png'),
-        'player_down': pygame.image.load('assets/player_down.png'),
-        'player_left': pygame.image.load('assets/player_left.png'),
-        'player_right': pygame.image.load('assets/player_right.png'),
-        'bomb': pygame.image.load('assets/bomb.png'),
-        'flame_center': pygame.image.load('assets/explosion_center.png'),
-        'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
-        'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
-    }
 
     controls = {
         'up': pygame.K_UP,
@@ -308,7 +304,6 @@ def init():
     context = {
         'size': size,
         'speed': speed,
-        'assets': assets,
         'screen': screen,
         'level': level,
     }
