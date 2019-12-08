@@ -88,10 +88,11 @@ class Bomb:
 
 
 class Flame:
-    def __init__(self, x, y, place_time, timer=1):
+    def __init__(self, lvl, x, y, place_time, timer=1):
         self.pos = [x, y]
         self.timer = timer
         self.place_time = place_time
+        self.should_spawn = not self.affects_environment(lvl)
     
     def loop(self, lvl):
         self.draw(lvl.canvas)
@@ -124,46 +125,46 @@ class Flame:
 
 class CenterFlame(Flame):
     def __init__(self, lvl, x, y, flames_list, radius, place_time, timer=1):
-        super().__init__(x, y, place_time, timer)
+        super().__init__(lvl, x, y, place_time, timer)
         
-        if radius > 1 and not self.affects_environment(lvl):
+        if radius > 1 and self.should_spawn:
             l = HorizontalFlame(lvl, x-1, y, flames_list, radius-1, place_time, timer, False)
             r = HorizontalFlame(lvl, x+1, y, flames_list, radius-1, place_time, timer, True)
             u = VerticalFlame(lvl, x, y-1, flames_list, radius-1, place_time, timer, False)
             d = VerticalFlame(lvl, x, y+1, flames_list, radius-1, place_time, timer, True)
             new_flames = [l, r, u, d]
-            flames_list += [f for f in new_flames if not f.affects_environment(lvl)]
+            flames_list += [f for f in new_flames if f.should_spawn]
 
     def draw(self, canvas):
         canvas.draw(ASSETS['flame_center'], self.pos)
 
 class HorizontalFlame(Flame):
     def __init__(self, lvl, x, y, flames_list, radius, place_time, timer, left_to_right):
-        super().__init__(x, y, place_time, timer)
+        super().__init__(lvl, x, y, place_time, timer)
 
-        if radius > 1 and not self.affects_environment(lvl):
+        if radius > 1 and self.should_spawn:
             if left_to_right:
                 nx = x+1
             else:
                 nx = x-1
             flame = HorizontalFlame(lvl, nx, y, flames_list, radius-1, place_time, timer, left_to_right)
-            if not flame.affects_environment(lvl):
+            if flame.should_spawn:
                 flames_list.append(flame)
 
     def draw(self, canvas):
         canvas.draw(ASSETS['flame_horizontal'], self.pos)
 
 class VerticalFlame(Flame):
-    def __init__(self, ctx, x, y, flames_list, radius, place_time, timer, up_to_down):
-        super().__init__(x, y, place_time, timer)
+    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer, up_to_down):
+        super().__init__(lvl, x, y, place_time, timer)
 
-        if radius > 1 and not self.affects_environment(ctx):
+        if radius > 1 and self.should_spawn:
             if up_to_down:
                 ny = y+1
             else:
                 ny = y-1
-            flame = VerticalFlame(ctx, x, ny, flames_list, radius-1, place_time, timer, up_to_down)
-            if not flame.affects_environment(ctx):
+            flame = VerticalFlame(lvl, x, ny, flames_list, radius-1, place_time, timer, up_to_down)
+            if flame.should_spawn:
                 flames_list.append(flame)
 
     def draw(self, canvas):
