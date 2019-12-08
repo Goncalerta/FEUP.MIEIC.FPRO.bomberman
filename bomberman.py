@@ -60,7 +60,7 @@ class Block(Enum):
 
 
 class Bomb:
-    def __init__(self, x, y, placer, radius=3, timer=3):
+    def __init__(self, x, y, placer, radius=2, timer=3):
         self.pos = (x, y)
         self.timer = timer
         self.radius = radius
@@ -204,22 +204,51 @@ class Player:
         new_pos = self.pos[:]
 
         if key == self.controls['up']:
-            new_pos[1] -= 0.125
+            new_pos[1] -= 0.0625
             new_direction = 'up'
         elif key == self.controls['down']:
-            new_pos[1] += 0.125
+            new_pos[1] += 0.0625
             new_direction = 'down'
         elif key == self.controls['left']:
-            new_pos[0] -= 0.125
+            new_pos[0] -= 0.0625
             new_direction = 'left'
         elif key == self.controls['right']:
-            new_pos[0] += 0.125
+            new_pos[0] += 0.0625
             new_direction = 'right'
         else:
             return
         
         if lvl.matrix.check_collides(*new_pos):
-            return
+            # Moving in a straight line will result in collision.
+            # However, if close enough to a corner, the player
+            # should still be able to move.
+            rounded_pos = new_pos[:]
+            if new_direction == 'down' or new_direction == 'up':
+                rounded_pos[0] = round(rounded_pos[0])
+            elif new_direction == 'left' or new_direction == 'right':
+                rounded_pos[1] = round(rounded_pos[1])
+
+            if lvl.matrix.check_collides(*rounded_pos):
+                return
+            
+            # The player is at a corner, so they should be able to move.
+            if new_direction == 'up' or new_direction == 'down':
+                dif = rounded_pos[0] - new_pos[0]
+                if dif > 0.125:
+                    new_pos[0] += 0.125
+                elif dif < -0.125:
+                    new_pos[0] += -0.125
+                else:
+                    new_pos[0] += dif
+
+            elif new_direction == 'left' or new_direction == 'right':
+                dif = rounded_pos[1] - new_pos[1]
+                if dif > 0.125:
+                    new_pos[1] += 0.125
+                elif dif < -0.125:
+                    new_pos[1] += -0.125
+                else:
+                    new_pos[1] += dif
         
         for bomb in lvl.bombs.values():
             if bomb.collides(*new_pos) and not bomb.collides(*self.pos):
@@ -351,7 +380,7 @@ class Context:
         self.screen = pygame.display.set_mode(self.size)
         self.game = Game(self.screen)
 
-        pygame.key.set_repeat(5, 90)
+        pygame.key.set_repeat(5, 60)
 
 
     def loop(self):
