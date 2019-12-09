@@ -37,6 +37,8 @@ DEFAULT_P1CONTROLS = {
     'place_bomb': pygame.K_SPACE,
 }
 
+GAME_FONT = pygame.font.Font(None, 58) 
+
 def list_colliding_coordinates(x, y):
     return math.floor(x), math.ceil(x), math.floor(y), math.ceil(y)
 
@@ -64,12 +66,12 @@ class Bomb:
         self.pos = (x, y)
         self.timer = timer
         self.radius = radius
-        self.place_time = time.process_time()
+        self.place_time = pygame.time.get_ticks()//1000
         self.placer = placer
     
     def loop(self, lvl):
         self.draw(lvl.canvas)
-        if time.process_time() - self.place_time >= self.timer:
+        if pygame.time.get_ticks()//1000 - self.place_time >= self.timer:
             self.detonate(lvl)
     
     def collides(self, x, y):
@@ -79,7 +81,7 @@ class Bomb:
     def detonate(self, lvl):
         x, y = self.pos
         flames_list = lvl.flames
-        flame = CenterFlame(lvl, x, y, flames_list, self.radius, time.process_time())
+        flame = CenterFlame(lvl, x, y, flames_list, self.radius, pygame.time.get_ticks()//1000)
         flames_list.append(flame)
         lvl.bombs[self.pos] = None
 
@@ -96,7 +98,7 @@ class Flame:
     
     def loop(self, lvl):
         self.draw(lvl.canvas)
-        if time.process_time() - self.place_time >= self.timer:
+        if pygame.time.get_ticks()//1000 - self.place_time >= self.timer:
             lvl.flames.remove(self)
 
     def affects_environment(self, lvl):
@@ -356,7 +358,7 @@ class Level:
         
 
 class Game:
-    def __init__(self, screen):
+    def __init__(self, screen, initial_time=300):
         # TODO Don't hardcode level layout
         matrix = BlockMatrix(goal=(5, 3))
         matrix.matrix[7][7] = Block.BOX
@@ -364,9 +366,21 @@ class Game:
 
         canvas = LevelCanvas(screen, (0, 100))
         self.level = Level(canvas, matrix, players)
+        
+        self.screen = screen
+        self.time = initial_time
+        self.begin_time = pygame.time.get_ticks()//1000
     
     def loop(self):
+        self.draw_gamebar()
         self.level.loop()
+        
+    def draw_gamebar(self):
+        timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
+        timer = 'TIME: {:03d}'.format(int(timer))
+        timer = GAME_FONT.render(timer, True, (0, 0, 0)) 
+        
+        self.screen.blit(timer, timer.get_rect(x=25, centery=50))
 
     def handle_key(self, key):
         self.level.handle_key(key)
