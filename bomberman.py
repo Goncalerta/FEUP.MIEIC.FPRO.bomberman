@@ -358,7 +358,7 @@ class Level:
         
 
 class Game:
-    def __init__(self, screen, initial_time=300):
+    def __init__(self, screen, initial_time=300, lives=3):
         # TODO Don't hardcode level layout
         matrix = BlockMatrix(goal=(5, 3))
         matrix.matrix[7][7] = Block.BOX
@@ -370,6 +370,8 @@ class Game:
         self.screen = screen
         self.time = initial_time
         self.begin_time = pygame.time.get_ticks()//1000
+        self.score = 0
+        self.lives = lives
     
     def loop(self):
         self.draw_gamebar()
@@ -378,9 +380,13 @@ class Game:
     def draw_gamebar(self):
         timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
         timer = 'TIME: {:03d}'.format(int(timer))
-        timer = GAME_FONT.render(timer, True, (0, 0, 0)) 
+        timer = GAME_FONT.render(timer, True, (0, 0, 0))
+        
+        score = 'SCORE: {:04d}'.format(self.score)
+        score = GAME_FONT.render(score, True, (0, 0, 0))
         
         self.screen.blit(timer, timer.get_rect(x=25, centery=50))
+        self.screen.blit(score, timer.get_rect(x=250, centery=50))
 
     def handle_key(self, key):
         self.level.handle_key(key)
