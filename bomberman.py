@@ -364,13 +364,14 @@ class Game:
         matrix.matrix[7][7] = Block.BOX
         players = [Player(1, 1)]
 
-        canvas = LevelCanvas(screen, (0, 100))
+        canvas = LevelCanvas(screen, (0, 130))
         self.level = Level(canvas, matrix, players)
         
         self.screen = screen
         self.time = initial_time
         self.begin_time = pygame.time.get_ticks()//1000
         self.score = 0
+        self.stage = 0
         self.lives = lives
     
     def loop(self):
@@ -384,9 +385,17 @@ class Game:
         
         score = 'SCORE: {:04d}'.format(self.score)
         score = GAME_FONT.render(score, True, (0, 0, 0))
+
+        stage = 'STAGE: {:02d}'.format(self.stage)
+        stage = GAME_FONT.render(stage, True, (0, 0, 0))
         
-        self.screen.blit(timer, timer.get_rect(x=25, centery=50))
-        self.screen.blit(score, timer.get_rect(x=250, centery=50))
+        lives = 'LIVES: {:02d}'.format(self.lives)
+        lives = GAME_FONT.render(lives, True, (0, 0, 0))
+
+        self.screen.blit(stage, score.get_rect(left=30, centery=35))
+        self.screen.blit(timer, lives.get_rect(right=610, centery=35))
+        self.screen.blit(score, score.get_rect(left=30, centery=95))
+        self.screen.blit(lives, lives.get_rect(right=610, centery=95))
 
     def handle_key(self, key):
         self.level.handle_key(key)
@@ -395,7 +404,7 @@ class Game:
 
 class Context:
     def __init__(self):
-        self.size = 650, 750
+        self.size = 650, 780
         self.speed = [2, 2]
         self.screen = pygame.display.set_mode(self.size)
         self.game = Game(self.screen)
