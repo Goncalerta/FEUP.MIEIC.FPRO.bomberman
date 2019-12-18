@@ -10,7 +10,6 @@ from enum import Enum
 import sys
 import pygame
 import math
-import time
 pygame.init()
 
 
@@ -97,9 +96,10 @@ class Flame:
         self.should_spawn = not self.affects_environment(lvl)
     
     def loop(self, lvl):
-        self.draw(lvl.canvas)
         if pygame.time.get_ticks()//1000 - self.place_time >= self.timer:
             lvl.flames.remove(self)
+        else:
+            self.draw(lvl.canvas)
 
     def affects_environment(self, lvl):
         x = self.pos[0]
@@ -182,7 +182,7 @@ class Player:
 
     def loop(self, lvl):
         self.draw(lvl.canvas)
-        
+        self.check_key_move(lvl)
         for f in lvl.flames:
             if f.collides(*self.pos):
                 self.die()
@@ -202,19 +202,20 @@ class Player:
 
         canvas.draw(img, self.pos)
         
-    def check_key_move(self, key, lvl):
+    def check_key_move(self, lvl):
         new_pos = self.pos[:]
+        pressed = pygame.key.get_pressed()
 
-        if key == self.controls['up']:
+        if pressed[self.controls['up']]:
             new_pos[1] -= 0.0625
             new_direction = 'up'
-        elif key == self.controls['down']:
+        elif pressed[self.controls['down']]:
             new_pos[1] += 0.0625
             new_direction = 'down'
-        elif key == self.controls['left']:
+        elif pressed[self.controls['left']]:
             new_pos[0] -= 0.0625
             new_direction = 'left'
-        elif key == self.controls['right']:
+        elif pressed[self.controls['right']]:
             new_pos[0] += 0.0625
             new_direction = 'right'
         else:
@@ -262,7 +263,6 @@ class Player:
         if key == self.controls['place_bomb']:
             if lvl.placed_bombs(self) < self.max_bombs:
                 lvl.try_place_bomb(*self.pos, self)
-        self.check_key_move(key, lvl)
 
 
 class BlockMatrix:
@@ -303,6 +303,7 @@ class BlockMatrix:
     def check_collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return self.is_solid(xl, yl) or self.is_solid(xl, yh) or self.is_solid(xh, yl) or self.is_solid(xh, yh)
+
 
 class LevelCanvas:
     def __init__(self, screen, pos, scale=50):
@@ -407,13 +408,15 @@ class Context:
         self.size = 650, 780
         self.speed = [2, 2]
         self.screen = pygame.display.set_mode(self.size)
+        self.clock = pygame.time.Clock()
         self.game = Game(self.screen)
 
-        pygame.key.set_repeat(5, 60)
+        #pygame.key.set_repeat(5, 60)
 
 
     def loop(self):
         while True:
+            self.clock.tick(30)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     sys.exit()
