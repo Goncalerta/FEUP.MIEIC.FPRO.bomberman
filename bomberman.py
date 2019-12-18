@@ -174,21 +174,28 @@ class VerticalFlame(Flame):
 
 
 class Player:
-    def __init__(self, x, y, controls=DEFAULT_P1CONTROLS, max_bombs=1):
+    # Player velocity in blocks per second
+    VELOCITY = 1.75
+
+    def __init__(self, game, x, y, controls=DEFAULT_P1CONTROLS, max_bombs=1):
         self.pos = [x, y]
         self.direction = 'down'
         self.controls = controls
         self.max_bombs = max_bombs
+        self.game = game
+        self.alive = True
 
-    def loop(self, lvl):
+    def loop(self, lvl, time):
         self.draw(lvl.canvas)
-        self.check_key_move(lvl)
-        for f in lvl.flames:
-            if f.collides(*self.pos):
-                self.die()
+        if self.alive:
+            self.check_key_move(lvl, time)
+            for f in lvl.flames:
+                if f.collides(*self.pos):
+                    self.die()
                 
     def die(self):
-        print("PLAYER DIED PLACEHOLDER")
+        self.alive = False
+        self.game.restart_level_instant = pygame.time.get_ticks() + 2500
         
     def draw(self, canvas):
         if self.direction == 'up':
@@ -202,21 +209,22 @@ class Player:
 
         canvas.draw(img, self.pos)
         
-    def check_key_move(self, lvl):
+    def check_key_move(self, lvl, time):
         new_pos = self.pos[:]
         pressed = pygame.key.get_pressed()
+        distance = self.VELOCITY * time/1000
 
         if pressed[self.controls['up']]:
-            new_pos[1] -= 0.0625
+            new_pos[1] -= distance
             new_direction = 'up'
         elif pressed[self.controls['down']]:
-            new_pos[1] += 0.0625
+            new_pos[1] += distance
             new_direction = 'down'
         elif pressed[self.controls['left']]:
-            new_pos[0] -= 0.0625
+            new_pos[0] -= distance
             new_direction = 'left'
         elif pressed[self.controls['right']]:
-            new_pos[0] += 0.0625
+            new_pos[0] += distance
             new_direction = 'right'
         else:
             return
@@ -234,22 +242,24 @@ class Player:
             if lvl.matrix.check_collides(*rounded_pos):
                 return
             
+            distance *= 2
+
             # The player is at a corner, so they should be able to move.
             if new_direction == 'up' or new_direction == 'down':
                 dif = rounded_pos[0] - new_pos[0]
-                if dif > 0.125:
-                    new_pos[0] += 0.125
-                elif dif < -0.125:
-                    new_pos[0] += -0.125
+                if dif > distance:
+                    new_pos[0] += distance
+                elif dif < -distance:
+                    new_pos[0] += -distance
                 else:
                     new_pos[0] += dif
 
             elif new_direction == 'left' or new_direction == 'right':
                 dif = rounded_pos[1] - new_pos[1]
-                if dif > 0.125:
-                    new_pos[1] += 0.125
-                elif dif < -0.125:
-                    new_pos[1] += -0.125
+                if dif > distance:
+                    new_pos[1] += distance
+                elif dif < -distance:
+                    new_pos[1] += -distance
                 else:
                     new_pos[1] += dif
         
@@ -326,10 +336,10 @@ class Level:
         self.flames = []
         self.enemies = []
 
-    def loop(self):
+    def loop(self, time):
         self.matrix.draw(self.canvas)
         for player in self.players:
-            player.loop(self)
+            player.loop(self, time)
         for bomb in self.bombs.values():
             bomb.loop(self)
         # Remove items that have a None value
@@ -360,28 +370,55 @@ class Level:
 
 class Game:
     def __init__(self, screen, initial_time=300, lives=3):
+        self.screen = screen
+        self.initial_time = initial_time
+
+        self.score = 0
+        self.stage = 1
+        self.lives = lives
+
+        self.restart_level_instant = None
+        self.time = None
+        self.begin_time = None
+        self.level = None 
+        self.initialize_level()
+        
+    def initialize_level(self):
+        self.restart_level_instant = None
+        self.time = self.initial_time
+        self.begin_time = pygame.time.get_ticks()//1000
+
         # TODO Don't hardcode level layout
         matrix = BlockMatrix(goal=(5, 3))
         matrix.matrix[7][7] = Block.BOX
-        players = [Player(1, 1)]
+        players = [Player(self, 1, 1)]
 
-        canvas = LevelCanvas(screen, (0, 130))
+        canvas = LevelCanvas(self.screen, (0, 130))
         self.level = Level(canvas, matrix, players)
-        
-        self.screen = screen
-        self.time = initial_time
-        self.begin_time = pygame.time.get_ticks()//1000
-        self.score = 0
-        self.stage = 0
-        self.lives = lives
-    
-    def loop(self):
+
+    def trigger_level_failed(self):
+        self.lives -= 1
+
+        if self.lives >= 0:
+            self.initialize_level()
+        else:
+            # TODO GAMEOVER screen
+            pass
+
+    def loop(self, time):
+        if self.restart_level_instant != None:
+            if pygame.time.get_ticks() > self.restart_level_instant:
+                self.trigger_level_failed()
         self.draw_gamebar()
-        self.level.loop()
+        self.level.loop(time)
         
     def draw_gamebar(self):
         timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
-        timer = 'TIME: {:03d}'.format(int(timer))
+        if timer < 0:
+            self.restart_level_instant = pygame.time.get_ticks() + 2500
+            timer = 'TIME\'S UP'
+        else:
+            timer = 'TIME: {:03d}'.format(int(timer))
         timer = GAME_FONT.render(timer, True, (0, 0, 0))
         
         score = 'SCORE: {:04d}'.format(self.score)
@@ -427,7 +464,7 @@ class Context:
             # if self.menu.is_open:
             #     self.menu.draw()
             # else:
-            self.game.loop()
+            self.game.loop(self.clock.get_time())
             
             pygame.display.flip()
 
