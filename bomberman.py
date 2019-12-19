@@ -26,6 +26,7 @@ ASSETS = {
     'flame_center': pygame.image.load('assets/explosion_center.png'),
     'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
     'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
+    'enemy': pygame.image.load('assets/enemy.png')
 }
 
 DEFAULT_P1CONTROLS = {
@@ -173,6 +174,83 @@ class VerticalFlame(Flame):
         canvas.draw(ASSETS['flame_vertical'], self.pos)
 
 
+class Enemy:
+    # Enemy velocity in blocks per second
+    VELOCITY = 1.70
+
+    def __init__(self, x, y, direction):
+        self.pos = [x, y]
+        self.direction = direction
+        self.alive = True
+        self.score_worth = 50
+        self.disappear_time = None
+    
+    def loop(self, lvl, time):
+        self.draw(lvl.canvas)
+        if self.alive:
+            self.move(lvl, time)
+            for f in lvl.flames:
+                if f.collides(*self.pos):
+                    self.die(lvl)
+        else:
+            if pygame.time.get_ticks() > self.disappear_time:
+                lvl.enemies.remove(self)
+
+    def die(self, lvl):
+        self.alive = False
+        self.disappear_time = pygame.time.get_ticks() + 2500
+    
+    def should_change_direction(self, lvl, new_pos):
+        for bomb in lvl.bombs.values():
+            if bomb.collides(round(new_pos[0]), round(new_pos[1])):
+                if not bomb.collides(*self.pos):
+                    return True
+        return (
+          (
+            lvl.matrix.check_enters_goal(*new_pos) 
+            and not lvl.matrix.check_enters_goal(*self.pos)
+          )
+          or lvl.matrix.check_collides(*new_pos)
+        )
+
+
+    def move(self, lvl, time):
+        new_pos = self.pos[:]
+        distance = self.VELOCITY * time/1000
+
+        if self.direction == 'up':
+            new_pos[1] -= distance
+        elif self.direction == 'down':
+            new_pos[1] += distance
+        elif self.direction == 'left':
+            new_pos[0] -= distance
+        elif self.direction == 'right':
+            new_pos[0] += distance
+        
+        if self.should_change_direction(lvl, new_pos):
+            if self.direction == 'up': 
+                self.direction = 'down'
+            elif self.direction == 'down': 
+                self.direction = 'up'
+            elif self.direction == 'right': 
+                self.direction = 'left'
+            elif self.direction == 'left': 
+                self.direction = 'right'
+            return
+
+        for bomb in lvl.bombs.values():
+            if bomb.collides(round(new_pos[0]), round(new_pos[1])):
+                if not bomb.collides(*self.pos):
+                    return 
+        self.pos = new_pos
+
+    def collides(self, x, y):
+        xl, xh, yl, yh = list_colliding_coordinates(x, y)
+        return xl <= self.pos[0] <= xh and yl <= self.pos[1] <= yh
+
+    def draw(self, canvas):
+        canvas.draw(ASSETS['enemy'], self.pos)
+
 class Player:
     # Player velocity in blocks per second
     VELOCITY = 1.75
@@ -192,6 +270,9 @@ class Player:
             for f in lvl.flames:
                 if f.collides(*self.pos):
                     self.die()
+            for e in lvl.enemies:
+                if e.alive and e.collides(*self.pos):
+                    self.die()
                 
     def die(self):
         self.alive = False
@@ -208,7 +289,7 @@ class Player:
             img = ASSETS['player_right']
 
         canvas.draw(img, self.pos)
-        
+
     def check_key_move(self, lvl, time):
         new_pos = self.pos[:]
         pressed = pygame.key.get_pressed()
@@ -270,7 +351,7 @@ class Player:
         self.direction = new_direction
         if lvl.matrix.check_enters_goal(*self.pos):
             # TODO enter goal animation
-            self.game.start_next_level_instant = pygame.time.get_ticks() + 2500
+            self.game.start_next_level_instant = pygame.time.get_ticks() + 2500    
 
     def handle_key(self, key, lvl):
         if key == self.controls['place_bomb']:
@@ -359,7 +440,7 @@ class Level:
         for flame in self.flames:
             flame.loop(self)
         for enemy in self.enemies:
-            enemy.loop(self)
+            enemy.loop(self, time)
 
     def handle_key(self, key):
         for player in self.players:
@@ -407,6 +488,7 @@ class Game:
 
         canvas = LevelCanvas(self.screen, (0, 130))
         self.level = Level(canvas, matrix, players)
+        self.level.enemies.append(Enemy(10, 1, 'right'))
 
     def trigger_level_failed(self):
         self.lives -= 1
