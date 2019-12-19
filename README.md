@@ -43,13 +43,13 @@ e podem matar o próprio jogador, se ele estiver na zona de explosão.
       1. ~~caso contrário, adiciona uma chama (flame)~~
          * ~~as chamas são controladas por duas listas: posição e tempos chamas (flames)~~
    1. ~~desenhar chamas~~
-   1. se jogador toca na chama, perde vida e volta à posição inicial
-   1. se jogador toca na porta, avança nível
+   1. ~~se jogador toca na chama, perde vida e volta à posição inicial~~
+   1. ~~se jogador toca na porta, avança nível~~
 1. **INIMIGOS**
-   1. duas lista: posições e direcções
-   1. desenhar
-   1. movimentar na direcção respectiva
-   1. colisão entre jogador/inimigo e chama/inimigo
+   1. ~~duas lista: posições e direcções~~
+   1. ~~desenhar~~
+   1. ~~movimentar na direcção respectiva~~
+   1. ~~colisão entre jogador/inimigo e chama/inimigo~~
 1. **DOIS JOGADORES**
 1. **ANIMAÇÕES**
 

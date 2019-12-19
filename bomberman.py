@@ -42,6 +42,9 @@ GAME_FONT = pygame.font.Font(None, 58)
 def list_colliding_coordinates(x, y):
     return math.floor(x), math.ceil(x), math.floor(y), math.ceil(y)
 
+def calculate_distance(p1, p2):
+    return ((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)**0.5
+
 class Block(Enum):
     GRASS = 0
     WALL = 1
@@ -202,8 +205,8 @@ class Enemy:
     
     def should_change_direction(self, lvl, new_pos):
         for bomb in lvl.bombs.values():
-            if bomb.collides(round(new_pos[0]), round(new_pos[1])):
-                if not bomb.collides(*self.pos):
+            if bomb.collides(*new_pos):
+                if calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos):
                     return True
         return (
           (
@@ -239,8 +242,8 @@ class Enemy:
             return
 
         for bomb in lvl.bombs.values():
-            if bomb.collides(round(new_pos[0]), round(new_pos[1])):
-                if not bomb.collides(*self.pos):
+            if bomb.collides(*new_pos):
+                if calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos):
                     return 
         self.pos = new_pos
 
