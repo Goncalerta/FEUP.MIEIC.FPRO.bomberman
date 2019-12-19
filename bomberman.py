@@ -10,6 +10,7 @@ from enum import Enum
 import sys
 import pygame
 import math
+import random
 pygame.init()
 
 
@@ -39,11 +40,14 @@ DEFAULT_P1CONTROLS = {
 
 GAME_FONT = pygame.font.Font(None, 58) 
 
+
 def list_colliding_coordinates(x, y):
     return math.floor(x), math.ceil(x), math.floor(y), math.ceil(y)
 
+
 def calculate_distance(p1, p2):
     return ((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)**0.5
+
 
 class Block(Enum):
     GRASS = 0
@@ -217,7 +221,6 @@ class Enemy:
           )
           or lvl.matrix.check_collides(*new_pos)
         )
-
 
     def move(self, lvl, time):
         new_pos = self.pos[:]
@@ -424,13 +427,13 @@ class LevelCanvas:
 
 
 class Level:
-    def __init__(self, canvas, matrix, players):
+    def __init__(self, canvas, matrix, players, enemies=[]):
         self.canvas = canvas
         self.matrix = matrix
         self.players = players
         self.bombs = {}
         self.flames = []
-        self.enemies = []
+        self.enemies = enemies
 
     def loop(self, time):
         self.matrix.draw(self.canvas)
@@ -462,7 +465,48 @@ class Level:
             if bomb.placer == player:
                 count += 1
         return count
-        
+    
+    @staticmethod
+    def generate(canvas, enemies_limit=[5, 8]):
+        matrix = [[None]*13]*13
+        enemies = []
+        players = [Player(self, 1, 1)]
+        goal_exists = False 
+        tiles_missing = 13*13
+
+        for y in range(0, 13):
+            for x in range(0, 13):
+                if x == 0 or x == 12 or y == 0 or y == 12:
+                    matrix[y][x] = Block.WALL
+                elif x % 2 == 0 and y % 2 == 0:
+                    matrix[y][x] = Block.WALL
+                elif x in [1, 2] and y in [1, 2]:
+                    matrix[y][x] = Block.GRASS
+                else:
+                    rnd = random.random()
+                    if 0 <= rnd < 0.05:
+                        if goal_exists:
+                            matrix[y][x] = Block.BOX
+                        else:
+                            matrix[y][x] = Block.GOAL
+                    if 0 <= rnd < 0.25:
+                        matrix[y][x] = Block.BOX
+                    elif 0.25 <= rnd < 0.60:
+                        matrix[y][x] = Block.GRASS
+                    elif 0.60 <= rnd < 70:
+                        
+
+                tiles_missing -= 1
+        matrix = random.choices(
+          [Block.GRASS, Block.BOX], 
+          cum_weights=[100, 20], 
+          k=13*13
+        )
+        goal = (random.randrange(0, 13), random.randrange(0, 13))
+
+        matrix = BlockMatrix(matrix)
+        return Level(canvas, matrix, players, enemies)
+
 
 class Game:
     def __init__(self, screen, initial_time=300, lives=3):
@@ -486,14 +530,8 @@ class Game:
         self.time = self.initial_time
         self.begin_time = pygame.time.get_ticks()//1000
 
-        # TODO Don't hardcode level layout
-        matrix = BlockMatrix(goal=(5, 3))
-        matrix.matrix[7][7] = Block.BOX
-        players = [Player(self, 1, 1)]
-
         canvas = LevelCanvas(self.screen, (0, 130))
-        self.level = Level(canvas, matrix, players)
-        self.level.enemies.append(Enemy(self, 10, 1, 'right'))
+        self.level = Level.generate(canvas)
 
     def trigger_level_failed(self):
         self.lives -= 1
@@ -545,7 +583,6 @@ class Game:
 
     def handle_key(self, key):
         self.level.handle_key(key)
-        
 
 
 class Context:
@@ -557,7 +594,6 @@ class Context:
         self.game = Game(self.screen)
 
         #pygame.key.set_repeat(5, 60)
-
 
     def loop(self):
         while True:
