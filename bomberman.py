@@ -268,6 +268,9 @@ class Player:
                 return
         self.pos = new_pos
         self.direction = new_direction
+        if lvl.matrix.check_enters_goal(*self.pos):
+            # TODO enter goal animation
+            self.game.start_next_level_instant = pygame.time.get_ticks() + 2500
 
     def handle_key(self, key, lvl):
         if key == self.controls['place_bomb']:
@@ -310,6 +313,13 @@ class BlockMatrix:
     def is_solid(self, x, y):
         return self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
     
+    def is_goal(self, x, y):
+        return self.matrix[y][x] == Block.GOAL
+
+    def check_enters_goal(self, x, y):
+        xl, xh, yl, yh = list_colliding_coordinates(x, y)
+        return self.is_goal(xl, yl) or self.is_goal(xl, yh) or self.is_goal(xh, yl) or self.is_goal(xh, yh)
+
     def check_collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return self.is_solid(xl, yl) or self.is_solid(xl, yh) or self.is_solid(xh, yl) or self.is_solid(xh, yh)
@@ -369,7 +379,7 @@ class Level:
         
 
 class Game:
-    def __init__(self, screen, initial_time=3, lives=3):
+    def __init__(self, screen, initial_time=300, lives=3):
         self.screen = screen
         self.initial_time = initial_time
 
@@ -378,6 +388,7 @@ class Game:
         self.lives = lives
 
         self.restart_level_instant = None
+        self.start_next_level_instant = None
         self.time = None
         self.begin_time = None
         self.level = None 
@@ -385,6 +396,7 @@ class Game:
         
     def initialize_level(self):
         self.restart_level_instant = None
+        self.start_next_level_instant = None
         self.time = self.initial_time
         self.begin_time = pygame.time.get_ticks()//1000
 
@@ -404,12 +416,18 @@ class Game:
         else:
             # TODO GAMEOVER screen
             pass
+    
+    def trigger_level_complete(self):
+        self.stage += 1
+        self.initialize_level()
 
     def loop(self, time):
         if self.restart_level_instant != None:
-            print(self.restart_level_instant, pygame.time.get_ticks())
             if pygame.time.get_ticks() > self.restart_level_instant:
                 self.trigger_level_failed()
+        if self.start_next_level_instant != None:
+            if pygame.time.get_ticks() > self.start_next_level_instant:
+                self.trigger_level_complete()
         self.draw_gamebar()
         self.level.loop(time)
         
