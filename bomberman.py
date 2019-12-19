@@ -181,7 +181,8 @@ class Enemy:
     # Enemy velocity in blocks per second
     VELOCITY = 1.70
 
-    def __init__(self, x, y, direction):
+    def __init__(self, game, x, y, direction):
+        self.game = game
         self.pos = [x, y]
         self.direction = direction
         self.alive = True
@@ -201,6 +202,7 @@ class Enemy:
 
     def die(self, lvl):
         self.alive = False
+        self.game.score += self.score_worth
         self.disappear_time = pygame.time.get_ticks() + 2500
     
     def should_change_direction(self, lvl, new_pos):
@@ -491,7 +493,7 @@ class Game:
 
         canvas = LevelCanvas(self.screen, (0, 130))
         self.level = Level(canvas, matrix, players)
-        self.level.enemies.append(Enemy(10, 1, 'right'))
+        self.level.enemies.append(Enemy(self, 10, 1, 'right'))
 
     def trigger_level_failed(self):
         self.lives -= 1
