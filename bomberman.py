@@ -369,7 +369,7 @@ class Level:
         
 
 class Game:
-    def __init__(self, screen, initial_time=300, lives=3):
+    def __init__(self, screen, initial_time=3, lives=3):
         self.screen = screen
         self.initial_time = initial_time
 
@@ -407,6 +407,7 @@ class Game:
 
     def loop(self, time):
         if self.restart_level_instant != None:
+            print(self.restart_level_instant, pygame.time.get_ticks())
             if pygame.time.get_ticks() > self.restart_level_instant:
                 self.trigger_level_failed()
         self.draw_gamebar()
@@ -414,12 +415,14 @@ class Game:
         
     def draw_gamebar(self):
         timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
-        if timer < 0:
-            self.restart_level_instant = pygame.time.get_ticks() + 2500
+        if timer < 0: 
+            if self.restart_level_instant == None:
+                self.restart_level_instant = pygame.time.get_ticks() + 2500
             timer = 'TIME\'S UP'
+            timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
             timer = 'TIME: {:03d}'.format(int(timer))
-        timer = GAME_FONT.render(timer, True, (0, 0, 0))
+            timer = GAME_FONT.render(timer, True, (0, 0, 0))
         
         score = 'SCORE: {:04d}'.format(self.score)
         score = GAME_FONT.render(score, True, (0, 0, 0))
