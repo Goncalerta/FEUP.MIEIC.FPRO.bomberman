@@ -466,16 +466,30 @@ class Level:
                 count += 1
         return count
     
-    @staticmethod
-    def generate(canvas, enemies_limit=[5, 8]):
-        matrix = [[None]*13]*13
-        enemies = []
-        players = [Player(self, 1, 1)]
-        goal_exists = False 
-        tiles_missing = 13*13
+    NUMBER_OF_TILES = 13*13
+    NUMBER_OF_RANDOMIZABLE_TILES = NUMBER_OF_TILES - 77
 
-        for y in range(0, 13):
-            for x in range(0, 13):
+    @staticmethod
+    def generate(game, canvas, enemies_limits=[3, 5], boxes_limits=[15, 35]):
+        
+        enemies_n = random.randrange(enemies_limits[0], enemies_limits[1]+1)
+        boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
+        # Doesn't include grass in spawn area
+        grass_n = Level.NUMBER_OF_RANDOMIZABLE_TILES - enemies_n - boxes_n
+
+        # 0: Grass
+        # 1: Boxes
+        # 2: Goal
+        # 3: Enemies
+        elements = [0]*grass_n + [1]*boxes_n + [2] + [3]*enemies_n
+        random.shuffle(elements)
+
+        matrix = [[None]*13 for _ in range(13)]
+        enemies = []
+        players = [Player(game, 1, 1)]
+        
+        for x in range(0, 13):
+            for y in range(0, 13): 
                 if x == 0 or x == 12 or y == 0 or y == 12:
                     matrix[y][x] = Block.WALL
                 elif x % 2 == 0 and y % 2 == 0:
@@ -483,26 +497,17 @@ class Level:
                 elif x in [1, 2] and y in [1, 2]:
                     matrix[y][x] = Block.GRASS
                 else:
-                    rnd = random.random()
-                    if 0 <= rnd < 0.05:
-                        if goal_exists:
-                            matrix[y][x] = Block.BOX
-                        else:
-                            matrix[y][x] = Block.GOAL
-                    if 0 <= rnd < 0.25:
-                        matrix[y][x] = Block.BOX
-                    elif 0.25 <= rnd < 0.60:
+                    rnd_element = elements.pop()
+                    if rnd_element == 0:
                         matrix[y][x] = Block.GRASS
-                    elif 0.60 <= rnd < 70:
-                        
-
-                tiles_missing -= 1
-        matrix = random.choices(
-          [Block.GRASS, Block.BOX], 
-          cum_weights=[100, 20], 
-          k=13*13
-        )
-        goal = (random.randrange(0, 13), random.randrange(0, 13))
+                    elif rnd_element == 1:
+                        matrix[y][x] = Block.BOX
+                    elif rnd_element == 2:
+                        matrix[y][x] = Block.BOX_GOAL
+                    elif rnd_element == 3:
+                        matrix[y][x] = Block.GRASS
+                        direction = random.choice(['up', 'down', 'left', 'right'])
+                        enemies.append(Enemy(game, x, y, direction))
 
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players, enemies)
@@ -531,7 +536,7 @@ class Game:
         self.begin_time = pygame.time.get_ticks()//1000
 
         canvas = LevelCanvas(self.screen, (0, 130))
-        self.level = Level.generate(canvas)
+        self.level = Level.generate(self, canvas)
 
     def trigger_level_failed(self):
         self.lives -= 1
