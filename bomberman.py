@@ -594,10 +594,12 @@ class Game:
     def handle_key(self, key):
         self.level.handle_key(key)
 
+
 class MenuOption:
-    def __init__(self, screen, label):
+    def __init__(self, screen, label, select):
         self.screen = screen
         self.label = label
+        self.select = select
 
     def draw(self, y, sel):
         cursor = ASSETS['menu_pointer']
@@ -607,53 +609,84 @@ class MenuOption:
             self.screen.blit(cursor, cursor.get_rect(left=100, centery=y))
         self.screen.blit(label, label.get_rect(left=175, centery=y))
 
-class Menu:
-    def __init__(self, screen):
-        self.screen = screen
-        self.is_open = False
-        self.selected = 0
-        self.options = [
-          MenuOption(screen, 'Classic Mode'), 
-          MenuOption(screen, '2P Duel Mode')
-        ]
 
+class Menu:
+    def __init__(self, screen, context):
+        self.context = context
+        self.screen = screen
+        self.is_open = True
+        self.selected = 0
+        self.mode = 'main'
+        self.options = {
+          'main': [
+            MenuOption(screen, 'Classic Mode', self.context.new_classic_game), 
+            MenuOption(screen, '2P Duel Mode', self.context.new_duel_game)
+          ],
+          'pause': [
+            MenuOption(screen, 'Continue', self.context.resume_game), 
+            MenuOption(screen, 'Main menu', lambda: self.open('main'))
+          ],
+          'game_over': [
+            MenuOption(screen, 'New Game', self.context.restart_game), 
+            MenuOption(screen, 'Main menu', lambda: self.open('main'))
+          ]
+        }
+
+    def open(self, mode):
+        self.mode = mode
+        self.is_open = True
+        self.selected = 0
 
     def draw(self):
         title_screen = ASSETS['title_screen']
         self.screen.blit(title_screen, title_screen.get_rect(centerx=325, top=25))
         y = 500
-        for i, option in enumerate(self.options):
+        for i, option in enumerate(self.options[self.mode]):
           option.draw(y, self.selected == i)
           y += 70
         
-
-
     def handle_key(self, key):
         if key == PAUSE_KEY:
-            self.is_open = False
+            self.context.resume_game()
         elif key == SELECT_KEY:
-            pass 
+            self.options[self.mode][self.selected].select()
         elif key == UP_KEY:
             if self.selected == 0:
-                self.selected = len(self.options) - 1
+                self.selected = len(self.options[self.mode]) - 1
             else:
                 self.selected -= 1
         elif key == DOWN_KEY:
-            if self.selected == len(self.options) - 1:
+            if self.selected == len(self.options[self.mode]) - 1:
                 self.selected = 0
             else:
                 self.selected += 1
 
     
-
 class Context:
     def __init__(self):
         self.size = 650, 780
         self.speed = [2, 2]
         self.screen = pygame.display.set_mode(self.size)
         self.clock = pygame.time.Clock()
+        self.game = None
+        self.menu = Menu(self.screen, self)
+
+    def new_classic_game(self):
+        self.menu.is_open = False
         self.game = Game(self.screen)
-        self.menu = Menu(self.screen)
+        #self.game = ClassicGame(self.screen)
+
+    def new_duel_game(self):
+        pass
+        #self.menu.is_open = False
+        #self.game = DuelGame(self.screen)
+
+    def resume_game(self):
+        if self.game != None:
+            self.menu.is_open = False
+
+    def restart_game(self):
+        pass
 
     def loop(self):
         while True:
@@ -665,7 +698,7 @@ class Context:
                     if self.menu.is_open:
                         self.menu.handle_key(event.key)
                     elif event.key == PAUSE_KEY:
-                        self.menu.is_open = True
+                        self.menu.open('pause')
                     else:
                         self.game.handle_key(event.key)
 
