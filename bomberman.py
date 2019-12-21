@@ -97,14 +97,14 @@ class Bomb:
 
 
 class Flame:
-    def __init__(self, lvl, x, y, place_time, timer=1):
+    def __init__(self, lvl, x, y, place_time, timer=0.5):
         self.pos = [x, y]
         self.timer = timer
         self.place_time = place_time
         self.should_spawn = not self.affects_environment(lvl)
     
     def loop(self, lvl):
-        if pygame.time.get_ticks()//1000 - self.place_time >= self.timer:
+        if pygame.time.get_ticks()/1000 - self.place_time >= self.timer:
             lvl.flames.remove(self)
         else:
             self.draw(lvl.canvas)
@@ -125,8 +125,7 @@ class Flame:
         return True
     
     def collides(self, x, y):
-        xl, xh, yl, yh = list_colliding_coordinates(x, y)
-        return xl <= self.pos[0] <= xh and yl <= self.pos[1] <= yh
+        return self.pos[0] - 0.5 <= x <= self.pos[0] + 0.5 and self.pos[1] - 0.5 <= y <= self.pos[1] + 0.5
     
     # Abstract method to be defined in children classes
     def draw(self, canvas):
@@ -134,7 +133,7 @@ class Flame:
 
 
 class CenterFlame(Flame):
-    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer=1):
+    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer=0.5):
         super().__init__(lvl, x, y, place_time, timer)
         
         if radius > 1 and self.should_spawn:
@@ -471,7 +470,6 @@ class Level:
 
     @staticmethod
     def generate(game, canvas, enemies_limits=[3, 5], boxes_limits=[15, 35]):
-        
         enemies_n = random.randrange(enemies_limits[0], enemies_limits[1]+1)
         boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
         # Doesn't include grass in spawn area
