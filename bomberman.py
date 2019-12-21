@@ -27,7 +27,9 @@ ASSETS = {
     'flame_center': pygame.image.load('assets/explosion_center.png'),
     'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
     'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
-    'enemy': pygame.image.load('assets/enemy.png')
+    'enemy': pygame.image.load('assets/enemy.png'),
+    'title_screen': pygame.image.load('assets/title_screen.png'),
+    'menu_pointer': pygame.image.load('assets/menu_pointer.png'),
 }
 
 DEFAULT_P1CONTROLS = {
@@ -37,6 +39,11 @@ DEFAULT_P1CONTROLS = {
     'right': pygame.K_RIGHT,
     'place_bomb': pygame.K_SPACE,
 }
+
+PAUSE_KEY = pygame.K_ESCAPE
+SELECT_KEY = pygame.K_RETURN
+UP_KEY = pygame.K_UP 
+DOWN_KEY = pygame.K_DOWN
 
 GAME_FONT = pygame.font.Font(None, 58) 
 
@@ -587,6 +594,57 @@ class Game:
     def handle_key(self, key):
         self.level.handle_key(key)
 
+class MenuOption:
+    def __init__(self, screen, label):
+        self.screen = screen
+        self.label = label
+
+    def draw(self, y, sel):
+        cursor = ASSETS['menu_pointer']
+        label = GAME_FONT.render(self.label, True, (255, 255, 255))
+
+        if sel:
+            self.screen.blit(cursor, cursor.get_rect(left=100, centery=y))
+        self.screen.blit(label, label.get_rect(left=175, centery=y))
+
+class Menu:
+    def __init__(self, screen):
+        self.screen = screen
+        self.is_open = False
+        self.selected = 0
+        self.options = [
+          MenuOption(screen, 'Classic Mode'), 
+          MenuOption(screen, '2P Duel Mode')
+        ]
+
+
+    def draw(self):
+        title_screen = ASSETS['title_screen']
+        self.screen.blit(title_screen, title_screen.get_rect(centerx=325, top=25))
+        y = 500
+        for i, option in enumerate(self.options):
+          option.draw(y, self.selected == i)
+          y += 70
+        
+
+
+    def handle_key(self, key):
+        if key == PAUSE_KEY:
+            self.is_open = False
+        elif key == SELECT_KEY:
+            pass 
+        elif key == UP_KEY:
+            if self.selected == 0:
+                self.selected = len(self.options) - 1
+            else:
+                self.selected -= 1
+        elif key == DOWN_KEY:
+            if self.selected == len(self.options) - 1:
+                self.selected = 0
+            else:
+                self.selected += 1
+
+    
 
 class Context:
     def __init__(self):
@@ -595,8 +653,7 @@ class Context:
         self.screen = pygame.display.set_mode(self.size)
         self.clock = pygame.time.Clock()
         self.game = Game(self.screen)
-
-        #pygame.key.set_repeat(5, 60)
+        self.menu = Menu(self.screen)
 
     def loop(self):
         while True:
@@ -605,13 +662,19 @@ class Context:
                 if event.type == pygame.QUIT:
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
-                    self.game.handle_key(event.key)
+                    if self.menu.is_open:
+                        self.menu.handle_key(event.key)
+                    elif event.key == PAUSE_KEY:
+                        self.menu.is_open = True
+                    else:
+                        self.game.handle_key(event.key)
 
-            self.screen.fill((140, 140, 140))
-            # if self.menu.is_open:
-            #     self.menu.draw()
-            # else:
-            self.game.loop(self.clock.get_time())
+            if self.menu.is_open:
+                self.screen.fill((0, 0, 0))
+                self.menu.draw()
+            else:
+                self.screen.fill((140, 140, 140))
+                self.game.loop(self.clock.get_time())
             
             pygame.display.flip()
 
