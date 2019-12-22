@@ -40,6 +40,14 @@ DEFAULT_P1CONTROLS = {
     'place_bomb': pygame.K_SPACE,
 }
 
+DEFAULT_P2CONTROLS = {
+    'up': pygame.K_w,
+    'down': pygame.K_s,
+    'left': pygame.K_a,
+    'right': pygame.K_d,
+    'place_bomb': pygame.K_q,
+}
+
 PAUSE_KEY = pygame.K_ESCAPE
 SELECT_KEY = pygame.K_RETURN
 UP_KEY = pygame.K_UP 
@@ -473,24 +481,26 @@ class Level:
         return count
     
     NUMBER_OF_TILES = 13*13
-    NUMBER_OF_RANDOMIZABLE_TILES = NUMBER_OF_TILES - 77
+    NUMBER_OF_RANDOMIZABLE_TILES_SP = NUMBER_OF_TILES - 77
+    NUMBER_OF_RANDOMIZABLE_TILES_MP = NUMBER_OF_TILES - 79
 
     @staticmethod
-    def generate(game, canvas, enemies_limits=[3, 5], boxes_limits=[15, 35]):
+    def generate_singleplayer(game, canvas, enemies_limits=[3, 5], boxes_limits=[15, 35]):
         enemies_n = random.randrange(enemies_limits[0], enemies_limits[1]+1)
         boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
         # Doesn't include grass in spawn area
-        grass_n = Level.NUMBER_OF_RANDOMIZABLE_TILES - enemies_n - boxes_n
+        grass_n = Level.NUMBER_OF_RANDOMIZABLE_TILES_SP - enemies_n - boxes_n
 
         # 0: Grass
         # 1: Boxes
         # 2: Goal
         # 3: Enemies
+        # 4: Powerups TODO
         elements = [0]*grass_n + [1]*boxes_n + [2] + [3]*enemies_n
+        enemies = []
         random.shuffle(elements)
 
         matrix = [[None]*13 for _ in range(13)]
-        enemies = []
         players = [Player(game, 1, 1)]
         
         for x in range(0, 13):
@@ -517,22 +527,75 @@ class Level:
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players, enemies)
 
+    @staticmethod
+    def generate_multiplayer(game, canvas, boxes_limits=[40, 60]):
+        boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
+        # Doesn't include grass in spawn areas
+        grass_n = Level.NUMBER_OF_RANDOMIZABLE_TILES_MP - boxes_n
+
+        # 0: Grass
+        # 1: Boxes
+        # 2: Goal
+        # 3: Enemies
+        # 4: Powerups TODO
+        elements = [0]*grass_n + [1]*boxes_n 
+        random.shuffle(elements)
+
+        matrix = [[None]*13 for _ in range(13)]
+        players = [Player(game, 1, 1), Player(game, 11, 11, DEFAULT_P2CONTROLS)]
+        
+        for x in range(0, 13):
+            for y in range(0, 13): 
+                if x == 0 or x == 12 or y == 0 or y == 12:
+                    matrix[y][x] = Block.WALL
+                elif x % 2 == 0 and y % 2 == 0:
+                    matrix[y][x] = Block.WALL
+                elif (x in [1, 2] and y in [1, 2]) or (x in [10, 11] and y in [10, 11]):
+                    matrix[y][x] = Block.GRASS
+                else:
+                    rnd_element = elements.pop()
+                    if rnd_element == 0:
+                        matrix[y][x] = Block.GRASS
+                    elif rnd_element == 1:
+                        matrix[y][x] = Block.BOX
+
+        matrix = BlockMatrix(matrix)
+        return Level(canvas, matrix, players)
+
 
 class Game:
-    def __init__(self, screen, initial_time=300, lives=3):
+    def __init__(self, screen, initial_time=200):
         self.screen = screen
         self.initial_time = initial_time
 
+        self.time = None
+        self.begin_time = None
+        self.level = None 
+        self.initialize_level()
+        
+    def initialize_level(self):
+        pass
+
+    def loop(self, time):
+        self.draw_gamebar()
+        self.level.loop(time)
+        
+    def draw_gamebar(self):
+        pass
+
+    def handle_key(self, key):
+        self.level.handle_key(key)
+
+
+class ClassicGame(Game):
+    def __init__(self, screen, initial_time=200, lives=3):
         self.score = 0
         self.stage = 1
         self.lives = lives
 
         self.restart_level_instant = None
         self.start_next_level_instant = None
-        self.time = None
-        self.begin_time = None
-        self.level = None 
-        self.initialize_level()
+        super().__init__(screen, initial_time)
         
     def initialize_level(self):
         self.restart_level_instant = None
@@ -541,7 +604,7 @@ class Game:
         self.begin_time = pygame.time.get_ticks()//1000
 
         canvas = LevelCanvas(self.screen, (0, 130))
-        self.level = Level.generate(self, canvas)
+        self.level = Level.generate_singleplayer(self, canvas)
 
     def trigger_level_failed(self):
         self.lives -= 1
@@ -563,8 +626,7 @@ class Game:
         if self.start_next_level_instant != None:
             if pygame.time.get_ticks() > self.start_next_level_instant:
                 self.trigger_level_complete()
-        self.draw_gamebar()
-        self.level.loop(time)
+        super().loop(time)
         
     def draw_gamebar(self):
         timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
@@ -591,8 +653,41 @@ class Game:
         self.screen.blit(score, score.get_rect(left=30, centery=95))
         self.screen.blit(lives, lives.get_rect(right=610, centery=95))
 
-    def handle_key(self, key):
-        self.level.handle_key(key)
+
+class DuelGame(Game):
+    def __init__(self, screen, initial_time=200):
+        self.end_level_instant = None
+        super().__init__(screen, initial_time)
+        
+    def initialize_level(self):
+        self.restart_level_instant = None
+        self.start_next_level_instant = None
+        self.time = self.initial_time
+        self.begin_time = pygame.time.get_ticks()//1000
+
+        canvas = LevelCanvas(self.screen, (0, 130))
+        self.level = Level.generate_multiplayer(self, canvas)
+
+    def trigger_level_over(self):
+        pass # TODO end menu
+
+    def loop(self, time):
+        if self.end_level_instant != None:
+            if pygame.time.get_ticks() > self.end_level_instant:
+                self.trigger_level_over()
+        super().loop(time)
+        
+    def draw_gamebar(self):
+        timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
+        if timer < 0: 
+            # TODO trigger sudden death
+            timer = 'SUDDEN DEATH'
+            timer = GAME_FONT.render(timer, True, (200, 0, 0))
+        else:
+            timer = 'TIME: {:03d}'.format(int(timer))
+            timer = GAME_FONT.render(timer, True, (0, 0, 0))
+
+        self.screen.blit(timer, timer.get_rect(right=610, centery=35))
 
 
 class MenuOption:
@@ -633,9 +728,10 @@ class Menu:
         }
 
     def open(self, mode):
+        if self.mode != mode:
+            self.selected = 0
         self.mode = mode
         self.is_open = True
-        self.selected = 0
 
     def draw(self):
         title_screen = ASSETS['title_screen']
@@ -646,7 +742,7 @@ class Menu:
           y += 70
         
     def handle_key(self, key):
-        if key == PAUSE_KEY:
+        if key == PAUSE_KEY and self.mode == 'pause':
             self.context.resume_game()
         elif key == SELECT_KEY:
             self.options[self.mode][self.selected].select()
@@ -673,13 +769,11 @@ class Context:
 
     def new_classic_game(self):
         self.menu.is_open = False
-        self.game = Game(self.screen)
-        #self.game = ClassicGame(self.screen)
+        self.game = ClassicGame(self.screen)
 
     def new_duel_game(self):
-        pass
-        #self.menu.is_open = False
-        #self.game = DuelGame(self.screen)
+        self.menu.is_open = False
+        self.game = DuelGame(self.screen)
 
     def resume_game(self):
         if self.game != None:
