@@ -715,7 +715,8 @@ class Menu:
         self.options = {
           'main': [
             MenuOption(screen, 'Classic Mode', self.context.new_classic_game), 
-            MenuOption(screen, '2P Duel Mode', self.context.new_duel_game)
+            MenuOption(screen, '2P Duel Mode', self.context.new_duel_game),
+            MenuOption(screen, 'Quit Game', sys.exit),
           ],
           'pause': [
             MenuOption(screen, 'Continue', self.context.resume_game), 
