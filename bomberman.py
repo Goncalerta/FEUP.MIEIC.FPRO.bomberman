@@ -19,10 +19,14 @@ ASSETS = {
     'wall': pygame.image.load('assets/wall.png'),
     'box': pygame.image.load('assets/box.png'),
     'goal': pygame.image.load('assets/goal.png'),
-    'player_up': pygame.image.load('assets/player_up.png'),
-    'player_down': pygame.image.load('assets/player_down.png'),
-    'player_left': pygame.image.load('assets/player_left.png'),
-    'player_right': pygame.image.load('assets/player_right.png'),
+    'player1_up': pygame.image.load('assets/player1_up.png'),
+    'player1_down': pygame.image.load('assets/player1_down.png'),
+    'player1_left': pygame.image.load('assets/player1_left.png'),
+    'player1_right': pygame.image.load('assets/player1_right.png'),
+    'player2_up': pygame.image.load('assets/player2_up.png'),
+    'player2_down': pygame.image.load('assets/player2_down.png'),
+    'player2_left': pygame.image.load('assets/player2_left.png'),
+    'player2_right': pygame.image.load('assets/player2_right.png'),
     'bomb': pygame.image.load('assets/bomb.png'),
     'flame_center': pygame.image.load('assets/explosion_center.png'),
     'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
@@ -277,8 +281,9 @@ class Player:
     # Player velocity in blocks per second
     VELOCITY = 1.75
 
-    def __init__(self, game, x, y, controls=DEFAULT_P1CONTROLS, max_bombs=1):
+    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_P1CONTROLS, max_bombs=1):
         self.pos = [x, y]
+        self.sprite = sprite
         self.direction = 'down'
         self.controls = controls
         self.max_bombs = max_bombs
@@ -298,17 +303,27 @@ class Player:
                 
     def die(self):
         self.alive = False
-        self.game.restart_level_instant = pygame.time.get_ticks() + 2500
+        self.game.player_died(self)
         
     def draw(self, canvas):
-        if self.direction == 'up':
-            img = ASSETS['player_up']
-        elif self.direction == 'down':
-            img = ASSETS['player_down']
-        elif self.direction == 'left':
-            img = ASSETS['player_left']
-        elif self.direction == 'right':
-            img = ASSETS['player_right']
+        if self.sprite == 'p1':
+            if self.direction == 'up':
+                img = ASSETS['player1_up']
+            elif self.direction == 'down':
+                img = ASSETS['player1_down']
+            elif self.direction == 'left':
+                img = ASSETS['player1_left']
+            elif self.direction == 'right':
+                img = ASSETS['player1_right']
+        elif self.sprite == 'p2':
+            if self.direction == 'up':
+                img = ASSETS['player2_up']
+            elif self.direction == 'down':
+                img = ASSETS['player2_down']
+            elif self.direction == 'left':
+                img = ASSETS['player2_left']
+            elif self.direction == 'right':
+                img = ASSETS['player2_right']
 
         canvas.draw(img, self.pos)
 
@@ -542,7 +557,7 @@ class Level:
         random.shuffle(elements)
 
         matrix = [[None]*13 for _ in range(13)]
-        players = [Player(game, 1, 1), Player(game, 11, 11, DEFAULT_P2CONTROLS)]
+        players = [Player(game, 1, 1), Player(game, 11, 11, 'p2', DEFAULT_P2CONTROLS)]
         
         for x in range(0, 13):
             for y in range(0, 13): 
@@ -653,9 +668,13 @@ class ClassicGame(Game):
         self.screen.blit(score, score.get_rect(left=30, centery=95))
         self.screen.blit(lives, lives.get_rect(right=610, centery=95))
 
+    def player_died(self, player):
+        self.restart_level_instant = pygame.time.get_ticks() + 2500
+
 
 class DuelGame(Game):
     def __init__(self, context, screen, initial_time=200):
+        self.loser = None
         self.end_level_instant = None
         super().__init__(context, screen, initial_time)
         
@@ -669,7 +688,10 @@ class DuelGame(Game):
         self.level = Level.generate_multiplayer(self, canvas)
 
     def trigger_level_over(self):
-        pass # TODO end menu
+        if self.loser != self.level.players[0]:
+            self.context.menu.open('mp_gameover_winsp1')
+        elif self.loser != self.level.players[1]:
+            self.context.menu.open('mp_gameover_winsp2')
 
     def loop(self, time):
         if self.end_level_instant != None:
@@ -688,6 +710,10 @@ class DuelGame(Game):
             timer = GAME_FONT.render(timer, True, (0, 0, 0))
 
         self.screen.blit(timer, timer.get_rect(right=610, centery=35))
+
+    def player_died(self, player):
+        self.loser = player
+        self.end_level_instant = pygame.time.get_ticks() + 2500
 
 
 class MenuOption:
@@ -725,7 +751,15 @@ class Menu:
           'gameover': [
             MenuOption(screen, 'New Game', self.context.restart_game), 
             MenuOption(screen, 'Main menu', lambda: self.open('main'))
-          ]
+          ],
+          'mp_gameover_winsp1': [
+            MenuOption(screen, 'Play Again', self.context.restart_game), 
+            MenuOption(screen, 'Main menu', lambda: self.open('main'))
+          ],
+          'mp_gameover_winsp2': [
+            MenuOption(screen, 'Play Again', self.context.restart_game), 
+            MenuOption(screen, 'Main menu', lambda: self.open('main'))
+          ],
         }
 
     def open(self, mode):
@@ -735,8 +769,19 @@ class Menu:
         self.is_open = True
 
     def draw(self):
-        title_screen = ASSETS['title_screen']
-        self.screen.blit(title_screen, title_screen.get_rect(centerx=325, top=25))
+        if self.mode == 'main' or self.mode == 'pause':
+            title_screen = ASSETS['title_screen']
+            self.screen.blit(title_screen, title_screen.get_rect(centerx=325, top=25))
+        elif self.mode == 'gameover':
+            gameover_label = GAME_FONT.render('Game Over', True, (255, 255, 255))
+            self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
+        elif self.mode == 'mp_gameover_winsp1':
+            gameover_label = GAME_FONT.render('Player one wins!', True, (0, 200, 255))
+            self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
+        elif self.mode == 'mp_gameover_winsp2':
+            gameover_label = GAME_FONT.render('Player two wins!', True, (255, 30, 0))
+            self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
+            
         y = 500
         for i, option in enumerate(self.options[self.mode]):
           option.draw(y, self.selected == i)
