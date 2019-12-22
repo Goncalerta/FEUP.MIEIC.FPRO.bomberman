@@ -335,16 +335,16 @@ class Player:
 
         if pressed[self.controls['up']]:
             new_pos[1] -= distance
-            new_direction = 'up'
+            self.direction = 'up'
         elif pressed[self.controls['down']]:
             new_pos[1] += distance
-            new_direction = 'down'
+            self.direction = 'down'
         elif pressed[self.controls['left']]:
             new_pos[0] -= distance
-            new_direction = 'left'
+            self.direction = 'left'
         elif pressed[self.controls['right']]:
             new_pos[0] += distance
-            new_direction = 'right'
+            self.direction = 'right'
         else:
             return
         
@@ -353,9 +353,9 @@ class Player:
             # However, if close enough to a corner, the player
             # should still be able to move.
             rounded_pos = new_pos[:]
-            if new_direction == 'down' or new_direction == 'up':
+            if self.direction == 'down' or self.direction == 'up':
                 rounded_pos[0] = round(rounded_pos[0])
-            elif new_direction == 'left' or new_direction == 'right':
+            elif self.direction == 'left' or self.direction == 'right':
                 rounded_pos[1] = round(rounded_pos[1])
 
             if lvl.matrix.check_collides(*rounded_pos):
@@ -364,7 +364,7 @@ class Player:
             distance *= 2
 
             # The player is at a corner, so they should be able to move.
-            if new_direction == 'up' or new_direction == 'down':
+            if self.direction == 'up' or self.direction == 'down':
                 dif = rounded_pos[0] - new_pos[0]
                 if dif > distance:
                     new_pos[0] += distance
@@ -373,7 +373,7 @@ class Player:
                 else:
                     new_pos[0] += dif
 
-            elif new_direction == 'left' or new_direction == 'right':
+            elif self.direction == 'left' or self.direction == 'right':
                 dif = rounded_pos[1] - new_pos[1]
                 if dif > distance:
                     new_pos[1] += distance
@@ -386,7 +386,6 @@ class Player:
             if bomb.collides(*new_pos) and not bomb.collides(*self.pos):
                 return
         self.pos = new_pos
-        self.direction = new_direction
         if lvl.matrix.check_enters_goal(*self.pos):
             # TODO enter goal animation
             if  self.game.start_next_level_timer == None and self.game.restart_level_timer == None:
@@ -713,8 +712,8 @@ class DuelGame(Game):
         self.screen.blit(timer, timer.get_rect(right=610, centery=35))
 
     def player_died(self, player):
-        self.loser = player
         if self.end_level_timer == None:
+            self.loser = player
             self.end_level_timer = 2.5
 
 
