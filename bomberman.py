@@ -564,7 +564,8 @@ class Level:
 
 
 class Game:
-    def __init__(self, screen, initial_time=200):
+    def __init__(self, context, screen, initial_time=200):
+        self.context = context
         self.screen = screen
         self.initial_time = initial_time
 
@@ -588,14 +589,14 @@ class Game:
 
 
 class ClassicGame(Game):
-    def __init__(self, screen, initial_time=200, lives=3):
+    def __init__(self, context, screen, initial_time=200, lives=3):
         self.score = 0
         self.stage = 1
         self.lives = lives
 
         self.restart_level_instant = None
         self.start_next_level_instant = None
-        super().__init__(screen, initial_time)
+        super().__init__(context, screen, initial_time)
         
     def initialize_level(self):
         self.restart_level_instant = None
@@ -612,8 +613,7 @@ class ClassicGame(Game):
         if self.lives >= 0:
             self.initialize_level()
         else:
-            # TODO GAMEOVER screen
-            pass
+            self.context.menu.open('gameover')
     
     def trigger_level_complete(self):
         self.stage += 1
@@ -655,9 +655,9 @@ class ClassicGame(Game):
 
 
 class DuelGame(Game):
-    def __init__(self, screen, initial_time=200):
+    def __init__(self, context, screen, initial_time=200):
         self.end_level_instant = None
-        super().__init__(screen, initial_time)
+        super().__init__(context, screen, initial_time)
         
     def initialize_level(self):
         self.restart_level_instant = None
@@ -722,7 +722,7 @@ class Menu:
             MenuOption(screen, 'Continue', self.context.resume_game), 
             MenuOption(screen, 'Main menu', lambda: self.open('main'))
           ],
-          'game_over': [
+          'gameover': [
             MenuOption(screen, 'New Game', self.context.restart_game), 
             MenuOption(screen, 'Main menu', lambda: self.open('main'))
           ]
@@ -770,18 +770,22 @@ class Context:
 
     def new_classic_game(self):
         self.menu.is_open = False
-        self.game = ClassicGame(self.screen)
+        self.game = ClassicGame(self, self.screen)
 
     def new_duel_game(self):
         self.menu.is_open = False
-        self.game = DuelGame(self.screen)
+        self.game = DuelGame(self, self.screen)
 
     def resume_game(self):
         if self.game != None:
             self.menu.is_open = False
 
     def restart_game(self):
-        pass
+        self.menu.is_open = False
+        if type(self.game) is ClassicGame:
+            self.game = ClassicGame(self, self.screen)
+        else:
+            self.game = DuelGame(self, self.screen)
 
     def loop(self):
         while True:
