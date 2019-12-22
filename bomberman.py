@@ -92,12 +92,12 @@ class Bomb:
         self.pos = (x, y)
         self.timer = timer
         self.radius = radius
-        self.place_time = pygame.time.get_ticks()//1000
         self.placer = placer
     
-    def loop(self, lvl):
+    def loop(self, lvl, time):
         self.draw(lvl.canvas)
-        if pygame.time.get_ticks()//1000 - self.place_time >= self.timer:
+        self.timer -= time
+        if self.timer <= 0:
             self.detonate(lvl)
     
     def collides(self, x, y):
@@ -107,7 +107,7 @@ class Bomb:
     def detonate(self, lvl):
         x, y = self.pos
         flames_list = lvl.flames
-        flame = CenterFlame(lvl, x, y, flames_list, self.radius, pygame.time.get_ticks()//1000)
+        flame = CenterFlame(lvl, x, y, flames_list, self.radius)
         flames_list.append(flame)
         lvl.bombs[self.pos] = None
 
@@ -116,14 +116,14 @@ class Bomb:
 
 
 class Flame:
-    def __init__(self, lvl, x, y, place_time, timer=0.5):
+    def __init__(self, lvl, x, y, timer=0.5):
         self.pos = [x, y]
         self.timer = timer
-        self.place_time = place_time
         self.should_spawn = not self.affects_environment(lvl)
     
-    def loop(self, lvl):
-        if pygame.time.get_ticks()/1000 - self.place_time >= self.timer:
+    def loop(self, lvl, time):
+        self.timer -= time
+        if self.timer <= 0:
             lvl.flames.remove(self)
         else:
             self.draw(lvl.canvas)
@@ -152,14 +152,14 @@ class Flame:
 
 
 class CenterFlame(Flame):
-    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer=0.5):
-        super().__init__(lvl, x, y, place_time, timer)
+    def __init__(self, lvl, x, y, flames_list, radius, timer=0.5):
+        super().__init__(lvl, x, y, timer)
         
         if radius > 1 and self.should_spawn:
-            l = HorizontalFlame(lvl, x-1, y, flames_list, radius-1, place_time, timer, False)
-            r = HorizontalFlame(lvl, x+1, y, flames_list, radius-1, place_time, timer, True)
-            u = VerticalFlame(lvl, x, y-1, flames_list, radius-1, place_time, timer, False)
-            d = VerticalFlame(lvl, x, y+1, flames_list, radius-1, place_time, timer, True)
+            l = HorizontalFlame(lvl, x-1, y, flames_list, radius-1, timer, False)
+            r = HorizontalFlame(lvl, x+1, y, flames_list, radius-1, timer, True)
+            u = VerticalFlame(lvl, x, y-1, flames_list, radius-1, timer, False)
+            d = VerticalFlame(lvl, x, y+1, flames_list, radius-1, timer, True)
             new_flames = [l, r, u, d]
             flames_list += [f for f in new_flames if f.should_spawn]
 
@@ -167,15 +167,15 @@ class CenterFlame(Flame):
         canvas.draw(ASSETS['flame_center'], self.pos)
 
 class HorizontalFlame(Flame):
-    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer, left_to_right):
-        super().__init__(lvl, x, y, place_time, timer)
+    def __init__(self, lvl, x, y, flames_list, radius, timer, left_to_right):
+        super().__init__(lvl, x, y, timer)
 
         if radius > 1 and self.should_spawn:
             if left_to_right:
                 nx = x+1
             else:
                 nx = x-1
-            flame = HorizontalFlame(lvl, nx, y, flames_list, radius-1, place_time, timer, left_to_right)
+            flame = HorizontalFlame(lvl, nx, y, flames_list, radius-1, timer, left_to_right)
             if flame.should_spawn:
                 flames_list.append(flame)
 
@@ -183,15 +183,15 @@ class HorizontalFlame(Flame):
         canvas.draw(ASSETS['flame_horizontal'], self.pos)
 
 class VerticalFlame(Flame):
-    def __init__(self, lvl, x, y, flames_list, radius, place_time, timer, up_to_down):
-        super().__init__(lvl, x, y, place_time, timer)
+    def __init__(self, lvl, x, y, flames_list, radius, timer, up_to_down):
+        super().__init__(lvl, x, y, timer)
 
         if radius > 1 and self.should_spawn:
             if up_to_down:
                 ny = y+1
             else:
                 ny = y-1
-            flame = VerticalFlame(lvl, x, ny, flames_list, radius-1, place_time, timer, up_to_down)
+            flame = VerticalFlame(lvl, x, ny, flames_list, radius-1, timer, up_to_down)
             if flame.should_spawn:
                 flames_list.append(flame)
 
@@ -209,7 +209,7 @@ class Enemy:
         self.direction = direction
         self.alive = True
         self.score_worth = 50
-        self.disappear_time = None
+        self.time_to_disappear = None
     
     def loop(self, lvl, time):
         self.draw(lvl.canvas)
@@ -219,13 +219,14 @@ class Enemy:
                 if f.collides(*self.pos):
                     self.die(lvl)
         else:
-            if pygame.time.get_ticks() > self.disappear_time:
+            self.time_to_disappear -= time
+            if self.time_to_disappear <= 0:
                 lvl.enemies.remove(self)
 
     def die(self, lvl):
         self.alive = False
         self.game.score += self.score_worth
-        self.disappear_time = pygame.time.get_ticks() + 2500
+        self.time_to_disappear = 2.5
     
     def should_change_direction(self, lvl, new_pos):
         for bomb in lvl.bombs.values():
@@ -242,7 +243,7 @@ class Enemy:
 
     def move(self, lvl, time):
         new_pos = self.pos[:]
-        distance = self.VELOCITY * time/1000
+        distance = self.VELOCITY * time
 
         if self.direction == 'up':
             new_pos[1] -= distance
@@ -330,7 +331,7 @@ class Player:
     def check_key_move(self, lvl, time):
         new_pos = self.pos[:]
         pressed = pygame.key.get_pressed()
-        distance = self.VELOCITY * time/1000
+        distance = self.VELOCITY * time
 
         if pressed[self.controls['up']]:
             new_pos[1] -= distance
@@ -388,7 +389,8 @@ class Player:
         self.direction = new_direction
         if lvl.matrix.check_enters_goal(*self.pos):
             # TODO enter goal animation
-            self.game.start_next_level_instant = pygame.time.get_ticks() + 2500    
+            if  self.game.start_next_level_timer == None and self.game.restart_level_timer == None:
+                self.game.start_next_level_timer = 2.5
 
     def handle_key(self, key, lvl):
         if key == self.controls['place_bomb']:
@@ -469,13 +471,13 @@ class Level:
         for player in self.players:
             player.loop(self, time)
         for bomb in self.bombs.values():
-            bomb.loop(self)
+            bomb.loop(self, time)
         # Remove items that have a None value
         for k in list(self.bombs.keys()):
             if self.bombs[k] == None:
                 del self.bombs[k]
         for flame in self.flames:
-            flame.loop(self)
+            flame.loop(self, time)
         for enemy in self.enemies:
             enemy.loop(self, time)
 
@@ -585,7 +587,6 @@ class Game:
         self.initial_time = initial_time
 
         self.time = None
-        self.begin_time = None
         self.level = None 
         self.initialize_level()
         
@@ -593,10 +594,10 @@ class Game:
         pass
 
     def loop(self, time):
-        self.draw_gamebar()
+        self.draw_gamebar(time)
         self.level.loop(time)
         
-    def draw_gamebar(self):
+    def draw_gamebar(self, time):
         pass
 
     def handle_key(self, key):
@@ -609,15 +610,14 @@ class ClassicGame(Game):
         self.stage = 1
         self.lives = lives
 
-        self.restart_level_instant = None
-        self.start_next_level_instant = None
+        self.restart_level_timer = None
+        self.start_next_level_timer = None
         super().__init__(context, screen, initial_time)
         
     def initialize_level(self):
-        self.restart_level_instant = None
-        self.start_next_level_instant = None
+        self.restart_level_timer = None
+        self.start_next_level_timer = None
         self.time = self.initial_time
-        self.begin_time = pygame.time.get_ticks()//1000
 
         canvas = LevelCanvas(self.screen, (0, 130))
         self.level = Level.generate_singleplayer(self, canvas)
@@ -635,23 +635,25 @@ class ClassicGame(Game):
         self.initialize_level()
 
     def loop(self, time):
-        if self.restart_level_instant != None:
-            if pygame.time.get_ticks() > self.restart_level_instant:
+        if self.restart_level_timer != None:
+            self.restart_level_timer -= time
+            if self.restart_level_timer <= 0:
                 self.trigger_level_failed()
-        if self.start_next_level_instant != None:
-            if pygame.time.get_ticks() > self.start_next_level_instant:
+        if self.start_next_level_timer != None:
+            self.start_next_level_timer -= time
+            if self.start_next_level_timer <= 0:
                 self.trigger_level_complete()
         super().loop(time)
         
-    def draw_gamebar(self):
-        timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
-        if timer < 0: 
-            if self.restart_level_instant == None:
-                self.restart_level_instant = pygame.time.get_ticks() + 2500
+    def draw_gamebar(self, time):
+        self.time -= time
+        if self.time <= 0: 
+            if self.restart_level_timer == None and self.start_next_level_timer == None:
+                self.restart_level_timer = 2.5
             timer = 'TIME\'S UP'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
-            timer = 'TIME: {:03d}'.format(int(timer))
+            timer = 'TIME: {:03d}'.format(int(self.time))
             timer = GAME_FONT.render(timer, True, (0, 0, 0))
         
         score = 'SCORE: {:04d}'.format(self.score)
@@ -669,20 +671,18 @@ class ClassicGame(Game):
         self.screen.blit(lives, lives.get_rect(right=610, centery=95))
 
     def player_died(self, player):
-        self.restart_level_instant = pygame.time.get_ticks() + 2500
+        if self.restart_level_timer == None and self.start_next_level_timer == None:
+            self.restart_level_timer = 2.5
 
 
 class DuelGame(Game):
     def __init__(self, context, screen, initial_time=200):
         self.loser = None
-        self.end_level_instant = None
+        self.end_level_timer = None
         super().__init__(context, screen, initial_time)
         
     def initialize_level(self):
-        self.restart_level_instant = None
-        self.start_next_level_instant = None
         self.time = self.initial_time
-        self.begin_time = pygame.time.get_ticks()//1000
 
         canvas = LevelCanvas(self.screen, (0, 130))
         self.level = Level.generate_multiplayer(self, canvas)
@@ -694,26 +694,28 @@ class DuelGame(Game):
             self.context.menu.open('mp_gameover_winsp2')
 
     def loop(self, time):
-        if self.end_level_instant != None:
-            if pygame.time.get_ticks() > self.end_level_instant:
+        if self.end_level_timer != None:
+            self.end_level_timer -= time
+            if self.end_level_timer <= 0:
                 self.trigger_level_over()
         super().loop(time)
         
-    def draw_gamebar(self):
-        timer = self.time - pygame.time.get_ticks()//1000 + self.begin_time
-        if timer < 0: 
+    def draw_gamebar(self, time):
+        self.time -= time
+        if self.time <= 0: 
             # TODO trigger sudden death
             timer = 'SUDDEN DEATH'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
-            timer = 'TIME: {:03d}'.format(int(timer))
+            timer = 'TIME: {:03d}'.format(int(self.time))
             timer = GAME_FONT.render(timer, True, (0, 0, 0))
 
         self.screen.blit(timer, timer.get_rect(right=610, centery=35))
 
     def player_died(self, player):
         self.loser = player
-        self.end_level_instant = pygame.time.get_ticks() + 2500
+        if self.end_level_timer == None:
+            self.end_level_timer = 2.5
 
 
 class MenuOption:
@@ -851,7 +853,7 @@ class Context:
                 self.menu.draw()
             else:
                 self.screen.fill((140, 140, 140))
-                self.game.loop(self.clock.get_time())
+                self.game.loop(self.clock.get_time()/1000)
             
             pygame.display.flip()
 
