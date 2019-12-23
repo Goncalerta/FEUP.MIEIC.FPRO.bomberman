@@ -18,7 +18,8 @@ ASSETS = {
     'grass': pygame.image.load('assets/grass.png'),
     'wall': pygame.image.load('assets/wall.png'),
     'box': pygame.image.load('assets/box.png'),
-    'goal': pygame.image.load('assets/goal.png'),
+    'goal_closed': pygame.image.load('assets/goal_closed.png'),
+    'goal_open': pygame.image.load('assets/goal_open.png'),
     'powerup_life': pygame.image.load('assets/powerup_life.png'),
     'powerup_blast': pygame.image.load('assets/powerup_blast.png'),
     'powerup_bombup': pygame.image.load('assets/powerup_bombup.png'),
@@ -84,21 +85,26 @@ class Block(Enum):
     BOX_POWERUP_BOMBUP = 9
     POWERUP_BOMBUP = 10
 
-    def draw(self, canvas, x, y):
-        assets_indexes = {
-            Block.GRASS: 'grass',
-            Block.WALL: 'wall',
-            Block.BOX: 'box',
-            Block.BOX_POWERUP_LIFE: 'box',
-            Block.BOX_POWERUP_BLAST: 'box',
-            Block.BOX_POWERUP_BOMBUP: 'box',
-            Block.BOX_GOAL: 'box',
-            Block.POWERUP_LIFE: 'powerup_life',
-            Block.POWERUP_BLAST: 'powerup_blast',
-            Block.POWERUP_BOMBUP: 'powerup_bombup',
-            Block.GOAL: 'goal',
-        }
-        img = ASSETS[assets_indexes[self]]
+    def draw(self, canvas, x, y, lvl):
+        if self == Block.GOAL:
+            if len(lvl.enemies) == 0:
+                img = ASSETS['goal_open']
+            else:
+                img = ASSETS['goal_closed']
+        else:
+            assets_indexes = {
+                Block.GRASS: 'grass',
+                Block.WALL: 'wall',
+                Block.BOX: 'box',
+                Block.BOX_POWERUP_LIFE: 'box',
+                Block.BOX_POWERUP_BLAST: 'box',
+                Block.BOX_POWERUP_BOMBUP: 'box',
+                Block.BOX_GOAL: 'box',
+                Block.POWERUP_LIFE: 'powerup_life',
+                Block.POWERUP_BLAST: 'powerup_blast',
+                Block.POWERUP_BOMBUP: 'powerup_bombup',
+            }
+            img = ASSETS[assets_indexes[self]]
         canvas.draw(img, (x, y))
 
 
@@ -428,7 +434,7 @@ class Player:
                 return
         self.pos = new_pos
         lvl.matrix.check_obtains_powerups(self)
-        if lvl.matrix.check_enters_goal(*self.pos):
+        if lvl.matrix.check_enters_goal(*self.pos, lvl.enemies):
             # TODO enter goal animation
             if  self.game.start_next_level_timer == None and self.game.restart_level_timer == None:
                 self.game.start_next_level_timer = 2.5
@@ -466,10 +472,10 @@ class BlockMatrix:
             x, y = goal
             self.matrix[y][x] = Block.BOX_GOAL
 
-    def draw(self, canvas):
+    def draw(self, canvas, lvl):
         for i, row in enumerate(self.matrix):
             for j, block in enumerate(row):
-                block.draw(canvas, j, i)
+                block.draw(canvas, j, i, lvl)
 
     def is_solid(self, x, y):
         return self.matrix[y][x] in [
@@ -494,9 +500,14 @@ class BlockMatrix:
                 self.matrix[ry][rx] = Block.GRASS
                 player.game.lives += 1
 
-    def check_enters_goal(self, x, y):
+    def check_enters_goal(self, x, y, enemies=[]):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
-        return self.is_goal(xl, yl) or self.is_goal(xl, yh) or self.is_goal(xh, yl) or self.is_goal(xh, yh)
+        return len(enemies) == 0 and (
+          self.is_goal(xl, yl) 
+          or self.is_goal(xl, yh) 
+          or self.is_goal(xh, yl) 
+          or self.is_goal(xh, yh)
+        )
 
     def check_collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
@@ -525,7 +536,7 @@ class Level:
         self.enemies = enemies
 
     def loop(self, time):
-        self.matrix.draw(self.canvas)
+        self.matrix.draw(self.canvas, self)
         for player in self.players:
             player.loop(self, time)
         for bomb in self.bombs.values():
