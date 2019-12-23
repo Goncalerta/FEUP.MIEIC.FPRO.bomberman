@@ -35,7 +35,7 @@ e podem matar o próprio jogador, se ele estiver na zona de explosão.
 1. ~~**JOGADOR**~~
    1. ~~desenhar jogador nas coordenadas dele~~
    1. ~~teclas para movimentar~~
-1. **BOMBA**
+1. ~~**BOMBA**~~
    1. ~~duas listas: posição bombas, tempos bombas~~
    1. ~~quando algum tempo for menor que 0, dentro dum `raio_bomba=3`:~~
       1. ~~se for caixa, desaparece~~
@@ -45,12 +45,12 @@ e podem matar o próprio jogador, se ele estiver na zona de explosão.
    1. ~~desenhar chamas~~
    1. ~~se jogador toca na chama, perde vida e volta à posição inicial~~
    1. ~~se jogador toca na porta, avança nível~~
-1. **INIMIGOS**
+1. ~~**INIMIGOS**~~
    1. ~~duas lista: posições e direcções~~
    1. ~~desenhar~~
    1. ~~movimentar na direcção respectiva~~
    1. ~~colisão entre jogador/inimigo e chama/inimigo~~
-1. **DOIS JOGADORES**
+1. ~~**DOIS JOGADORES**~~
 1. **ANIMAÇÕES**
 
 18 November 2019

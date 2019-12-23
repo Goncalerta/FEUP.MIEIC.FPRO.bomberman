@@ -19,6 +19,9 @@ ASSETS = {
     'wall': pygame.image.load('assets/wall.png'),
     'box': pygame.image.load('assets/box.png'),
     'goal': pygame.image.load('assets/goal.png'),
+    'powerup_life': pygame.image.load('assets/powerup_life.png'),
+    'powerup_blast': pygame.image.load('assets/powerup_blast.png'),
+    'powerup_bombup': pygame.image.load('assets/powerup_bombup.png'),
     'player1_up': pygame.image.load('assets/player1_up.png'),
     'player1_down': pygame.image.load('assets/player1_down.png'),
     'player1_left': pygame.image.load('assets/player1_left.png'),
@@ -74,13 +77,25 @@ class Block(Enum):
     BOX = 2
     BOX_GOAL = 3
     GOAL = 4
+    BOX_POWERUP_LIFE = 5
+    POWERUP_LIFE = 6
+    BOX_POWERUP_BLAST = 7
+    POWERUP_BLAST = 8
+    BOX_POWERUP_BOMBUP = 9
+    POWERUP_BOMBUP = 10
 
     def draw(self, canvas, x, y):
         assets_indexes = {
             Block.GRASS: 'grass',
             Block.WALL: 'wall',
             Block.BOX: 'box',
+            Block.BOX_POWERUP_LIFE: 'box',
+            Block.BOX_POWERUP_BLAST: 'box',
+            Block.BOX_POWERUP_BOMBUP: 'box',
             Block.BOX_GOAL: 'box',
+            Block.POWERUP_LIFE: 'powerup_life',
+            Block.POWERUP_BLAST: 'powerup_blast',
+            Block.POWERUP_BOMBUP: 'powerup_bombup',
             Block.GOAL: 'goal',
         }
         img = ASSETS[assets_indexes[self]]
@@ -136,11 +151,21 @@ class Flame:
             return False
         block = matrix[y][x]
         if block in [Block.GRASS, Block.GOAL]:
+            # TODO shouldn't goal be considered as affecting the environment?
             return False
-        if block == Block.BOX:
+        if block in [Block.BOX]:
             matrix[y][x] = Block.GRASS
+        elif block in [Block.POWERUP_BLAST, Block.POWERUP_BOMBUP, Block.POWERUP_LIFE]:
+            matrix[y][x] = Block.GRASS
+            return False
         elif block == Block.BOX_GOAL:
             matrix[y][x] = Block.GOAL
+        elif block == Block.BOX_POWERUP_BOMBUP:
+            matrix[y][x] = Block.POWERUP_BOMBUP
+        elif block == Block.BOX_POWERUP_BLAST:
+            matrix[y][x] = Block.POWERUP_BLAST
+        elif block == Block.BOX_POWERUP_LIFE:
+            matrix[y][x] = Block.POWERUP_LIFE
         return True
     
     def collides(self, x, y):
@@ -282,7 +307,7 @@ class Player:
     # Player velocity in blocks per second
     VELOCITY = 1.75
 
-    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_P1CONTROLS, max_bombs=1):
+    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_P1CONTROLS, max_bombs=1, bomb_blast_radius=2):
         self.pos = [x, y]
         self.sprite = sprite
         self.direction = 'down'
@@ -290,6 +315,7 @@ class Player:
         self.max_bombs = max_bombs
         self.game = game
         self.alive = True
+        self.bomb_blast_radius = bomb_blast_radius
 
     def loop(self, lvl, time):
         self.draw(lvl.canvas)
@@ -386,6 +412,7 @@ class Player:
             if bomb.collides(*new_pos) and not bomb.collides(*self.pos):
                 return
         self.pos = new_pos
+        lvl.matrix.check_obtains_powerups(self)
         if lvl.matrix.check_enters_goal(*self.pos):
             # TODO enter goal animation
             if  self.game.start_next_level_timer == None and self.game.restart_level_timer == None:
@@ -430,10 +457,27 @@ class BlockMatrix:
                 block.draw(canvas, j, i)
 
     def is_solid(self, x, y):
-        return self.matrix[y][x] in [Block.WALL, Block.BOX, Block.BOX_GOAL]
+        return self.matrix[y][x] in [
+          Block.WALL, Block.BOX, Block.BOX_GOAL, Block.BOX_POWERUP_BLAST, 
+          Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_LIFE
+        ]
     
     def is_goal(self, x, y):
         return self.matrix[y][x] == Block.GOAL
+
+    def check_obtains_powerups(self, player):
+        x, y = player.pos
+        rx, ry = int(round(x)), int(round(y))
+        if -0.25 <= x - rx <= 0.25 and -0.25 <= y - ry <= 0.25:
+            if self.matrix[ry][rx] == Block.POWERUP_BOMBUP:
+                self.matrix[ry][rx] = Block.GRASS
+                player.max_bombs += 1
+            elif self.matrix[ry][rx] == Block.POWERUP_BLAST:
+                self.matrix[ry][rx] = Block.GRASS
+                player.bomb_blast_radius += 1
+            elif self.matrix[ry][rx] == Block.POWERUP_LIFE:
+                self.matrix[ry][rx] = Block.GRASS
+                player.game.lives += 1
 
     def check_enters_goal(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
@@ -487,7 +531,7 @@ class Level:
     def try_place_bomb(self, x, y, placer):
         pos = round(x), round(y)
         if pos not in self.bombs:
-            self.bombs[pos] = Bomb(*pos, placer)
+            self.bombs[pos] = Bomb(*pos, placer, placer.bomb_blast_radius)
 
     def placed_bombs(self, player):
         count = 0
@@ -512,7 +556,7 @@ class Level:
         # 2: Goal
         # 3: Enemies
         # 4: Powerups TODO
-        elements = [0]*grass_n + [1]*boxes_n + [2] + [3]*enemies_n
+        elements = [0]*grass_n + [1]*boxes_n + [2] + [3]*enemies_n + [4]
         enemies = []
         random.shuffle(elements)
 
@@ -539,22 +583,29 @@ class Level:
                         matrix[y][x] = Block.GRASS
                         direction = random.choice(['up', 'down', 'left', 'right'])
                         enemies.append(Enemy(game, x, y, direction))
-
+                    elif rnd_element == 4:
+                        powerup = random.choice([
+                          Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_LIFE
+                        ])
+                        matrix[y][x] = powerup
+        matrix[1][3] = Block.BOX_POWERUP_BLAST
+        matrix[3][1] = Block.BOX_POWERUP_BOMBUP
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players, enemies)
 
     @staticmethod
-    def generate_multiplayer(game, canvas, boxes_limits=[40, 60]):
+    def generate_multiplayer(game, canvas, boxes_limits=[35, 55], powerups_limits=[5, 8]):
         boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
+        powerups_n = random.randrange(powerups_limits[0], powerups_limits[1]+1)
         # Doesn't include grass in spawn areas
-        grass_n = Level.NUMBER_OF_RANDOMIZABLE_TILES_MP - boxes_n
+        grass_n = Level.NUMBER_OF_RANDOMIZABLE_TILES_MP - boxes_n - powerups_n
 
         # 0: Grass
         # 1: Boxes
         # 2: Goal
         # 3: Enemies
         # 4: Powerups TODO
-        elements = [0]*grass_n + [1]*boxes_n 
+        elements = [0]*grass_n + [1]*boxes_n + [4]*powerups_n
         random.shuffle(elements)
 
         matrix = [[None]*13 for _ in range(13)]
@@ -574,6 +625,11 @@ class Level:
                         matrix[y][x] = Block.GRASS
                     elif rnd_element == 1:
                         matrix[y][x] = Block.BOX
+                    elif rnd_element == 4:
+                        powerup = random.choice([
+                          Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP,
+                        ])
+                        matrix[y][x] = powerup
 
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players)
