@@ -41,12 +41,20 @@ ASSETS = {
     'falling_wall': pygame.image.load('assets/falling.png')
 }
 
-DEFAULT_P1CONTROLS = {
+DEFAULT_SINGLEPLAYER_CONTROLS = {
     'up': pygame.K_UP,
     'down': pygame.K_DOWN,
     'left': pygame.K_LEFT,
     'right': pygame.K_RIGHT,
     'place_bomb': pygame.K_SPACE,
+}
+
+DEFAULT_P1CONTROLS = {
+    'up': pygame.K_UP,
+    'down': pygame.K_DOWN,
+    'left': pygame.K_LEFT,
+    'right': pygame.K_RIGHT,
+    'place_bomb': pygame.K_PERIOD,
 }
 
 DEFAULT_P2CONTROLS = {
@@ -327,7 +335,7 @@ class Player:
     # Player velocity in blocks per second
     VELOCITY = 1.75
 
-    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_P1CONTROLS, max_bombs=1, bomb_blast_radius=2):
+    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=1, bomb_blast_radius=2):
         self.pos = [x, y]
         self.sprite = sprite
         self.direction = 'down'
@@ -723,7 +731,7 @@ class Level:
         random.shuffle(elements)
 
         matrix = [[None]*13 for _ in range(13)]
-        players = [Player(game, 1, 1), Player(game, 11, 11, 'p2', DEFAULT_P2CONTROLS)]
+        players = [Player(game, 1, 1, 'p1', DEFAULT_P1CONTROLS), Player(game, 11, 11, 'p2', DEFAULT_P2CONTROLS)]
         
         for x in range(0, 13):
             for y in range(0, 13): 
