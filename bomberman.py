@@ -782,7 +782,7 @@ class Game:
 
 
 class ClassicGame(Game):
-    def __init__(self, context, screen, initial_time=200, lives=3):
+    def __init__(self, context, screen, initial_time=200, lives=0):
         self.score = 0
         self.stage = 1
         self.lives = lives
@@ -805,7 +805,7 @@ class ClassicGame(Game):
         if self.lives >= 0:
             self.initialize_level()
         else:
-            self.context.menu.open('gameover')
+            self.context.menu.open('gameover', score=self.score, stage=self.stage)
     
     def trigger_level_complete(self):
         self.stage += 1
@@ -920,6 +920,8 @@ class Menu:
         self.is_open = True
         self.selected = 0
         self.mode = 'main'
+        self.score = None
+        self.stage = None
         self.options = {
           'main': [
             MenuOption(screen, 'Classic Mode', self.context.new_classic_game), 
@@ -944,7 +946,9 @@ class Menu:
           ],
         }
 
-    def open(self, mode):
+    def open(self, mode, score=None, stage=None):
+        self.score = score
+        self.stage = stage
         if self.mode != mode:
             self.selected = 0
         self.mode = mode
@@ -956,7 +960,14 @@ class Menu:
             self.screen.blit(title_screen, title_screen.get_rect(centerx=325, top=25))
         elif self.mode == 'gameover':
             gameover_label = GAME_FONT.render('Game Over', True, (255, 255, 255))
-            self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
+            score = 'SCORE: {:04d}'.format(self.score)
+            score = GAME_FONT.render(score, True, (255, 255, 255))
+            stage = 'STAGE: {:02d}'.format(self.stage)
+            stage = GAME_FONT.render(stage, True, (255, 255, 255))
+
+            self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=190))
+            self.screen.blit(score, gameover_label.get_rect(left=80, top=250))
+            self.screen.blit(stage, gameover_label.get_rect(left=80, top=300))
         elif self.mode == 'mp_gameover_winsp1':
             gameover_label = GAME_FONT.render('Player one wins!', True, (0, 200, 255))
             self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
