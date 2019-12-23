@@ -135,6 +135,11 @@ class Flame:
         self.pos = [x, y]
         self.timer = timer
         self.should_spawn = not self.affects_environment(lvl)
+
+        if lvl.bombs.get(tuple(self.pos), None) != None:
+            bomb = lvl.bombs[tuple(self.pos)]
+            if bomb.timer > 0.125:
+                bomb.timer = 0.125
     
     def loop(self, lvl, time):
         self.timer -= time
@@ -588,8 +593,7 @@ class Level:
                           Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_LIFE
                         ])
                         matrix[y][x] = powerup
-        matrix[1][3] = Block.BOX_POWERUP_BLAST
-        matrix[3][1] = Block.BOX_POWERUP_BOMBUP
+
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players, enemies)
 
