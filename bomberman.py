@@ -118,6 +118,12 @@ class Bomb:
     def collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return xl <= self.pos[0] <= xh and yl <= self.pos[1] <= yh
+
+    # Used to check whether or not the placer of the bomb can still
+    # walk through it with no colision.
+    def collides_closer(self, x, y):
+        rx, ry = round(x), round(y)
+        return -0.375 <= x - self.pos[0] <= 0.375 and -0.375 <= y - self.pos[1] <= 0.375
     
     def detonate(self, lvl):
         x, y = self.pos
@@ -414,7 +420,11 @@ class Player:
                     new_pos[1] += dif
         
         for bomb in lvl.bombs.values():
-            if bomb.collides(*new_pos) and not bomb.collides(*self.pos):
+            if (
+              bomb.collides(*new_pos) 
+              and not bomb.collides_closer(*self.pos) 
+              and calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos)
+            ):
                 return
         self.pos = new_pos
         lvl.matrix.check_obtains_powerups(self)
