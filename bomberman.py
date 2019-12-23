@@ -38,6 +38,7 @@ ASSETS = {
     'enemy': pygame.image.load('assets/enemy.png'),
     'title_screen': pygame.image.load('assets/title_screen.png'),
     'menu_pointer': pygame.image.load('assets/menu_pointer.png'),
+    'falling_wall': pygame.image.load('assets/falling.png')
 }
 
 DEFAULT_P1CONTROLS = {
@@ -84,6 +85,7 @@ class Block(Enum):
     POWERUP_BLAST = 8
     BOX_POWERUP_BOMBUP = 9
     POWERUP_BOMBUP = 10
+    FALLING_WALL = 11
 
     def draw(self, canvas, x, y, lvl):
         if self == Block.GOAL:
@@ -103,6 +105,7 @@ class Block(Enum):
                 Block.POWERUP_LIFE: 'powerup_life',
                 Block.POWERUP_BLAST: 'powerup_blast',
                 Block.POWERUP_BOMBUP: 'powerup_bombup',
+                Block.FALLING_WALL: 'falling_wall'
             }
             img = ASSETS[assets_indexes[self]]
         canvas.draw(img, (x, y))
@@ -167,7 +170,7 @@ class Flame:
         if not (0 <= x <= len(matrix[0]) and 0 <= y <= len(matrix)):
             return False
         block = matrix[y][x]
-        if block in [Block.GRASS, Block.GOAL]:
+        if block in [Block.GRASS, Block.FALLING_WALL, Block.GOAL]:
             # TODO shouldn't goal be considered as affecting the environment?
             return False
         if block in [Block.BOX]:
@@ -447,6 +450,10 @@ class Player:
 
 class BlockMatrix:
     def __init__(self, matrix=None, goal=None):
+        self.sudden_death_fallen_blocks = (0, 0)
+        self.falling = None
+        self.falling_direction = 'right'
+        self.move_until = 9
         if matrix is None:
             self.matrix = [
                 [1 for _ in range(13)],
@@ -472,7 +479,7 @@ class BlockMatrix:
             x, y = goal
             self.matrix[y][x] = Block.BOX_GOAL
 
-    def draw(self, canvas, lvl):
+    def draw(self, canvas, lvl, fallen_state=0):
         for i, row in enumerate(self.matrix):
             for j, block in enumerate(row):
                 block.draw(canvas, j, i, lvl)
@@ -483,6 +490,88 @@ class BlockMatrix:
           Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_LIFE
         ]
     
+    def drop_wall(self, x, y):
+        self.falling = [x, y]
+        self.matrix[y][x] = Block.FALLING_WALL
+    
+    def drop_next_wall(self):
+        if self.falling == None:
+            self.drop_wall(1, 1)
+        else:
+            px, py = self.falling
+            self.matrix[py][px] = Block.WALL
+            for _ in range(4):
+                if self.falling_direction == 'right':
+                    for i in range(px, 13):
+                        if self.matrix[py][i] != Block.WALL:
+                            self.drop_wall(i, py)
+                            return
+                    self.falling_direction = 'down'
+                elif self.falling_direction == 'down':
+                    for i in range(py, 13):
+                        if self.matrix[i][px] != Block.WALL:
+                            self.drop_wall(px, i)
+                            return
+                    self.falling_direction = 'left'
+                elif self.falling_direction == 'left':
+                    for i in range(px, -1, -1):
+                        if self.matrix[py][i] != Block.WALL:
+                            self.drop_wall(i, py)
+                            return
+                    self.falling_direction = 'up'
+                elif self.falling_direction == 'up':
+                    for i in range(py, -1, -1):
+                        if self.matrix[i][px] != Block.WALL:
+                            self.drop_wall(px, i)
+                            return
+                    self.falling_direction = 'right_j'
+                if self.falling_direction == 'right_j':
+                    for i in range(px, 13):
+                        if self.matrix[py][i] != Block.WALL:
+                            self.drop_wall(i, py)
+                            return
+                    px += 1
+                    self.falling_direction = 'down_j'
+                elif self.falling_direction == 'down_j':
+                    for i in range(py, 13):
+                        if self.matrix[i][px] != Block.WALL:
+                            self.drop_wall(px, i)
+                            return
+                    py += 1
+                    self.falling_direction = 'left_j'
+                elif self.falling_direction == 'left_j':
+                    for i in range(px, -1, -1):
+                        if self.matrix[py][i] != Block.WALL:
+                            self.drop_wall(i, py)
+                            return
+                    px -= 1
+                    self.falling_direction = 'up_j'
+                elif self.falling_direction == 'up_j':
+                    for i in range(py, -1, -1):
+                        if self.matrix[i][px] != Block.WALL:
+                            self.drop_wall(px, i)
+                            return
+                    self.falling_direction = 'right'
+
+
+    def sudden_death_loop(self, game, time):
+        fallen, current = self.sudden_death_fallen_blocks
+        current += time
+        if current >= 1:
+            fallen += 1
+            current -= 1
+            for player in game.level.players:
+                # TODO kill players
+                pass
+            for flame in game.level.flames:
+                if flame.pos == self.falling:
+                    flame.timer = 0
+            for pos, bom in game.level.bombs.items():
+                # TODO stop bombs
+                pass
+            self.drop_next_wall()
+        self.sudden_death_fallen_blocks = fallen, current
+
     def is_goal(self, x, y):
         return self.matrix[y][x] == Block.GOAL
 
@@ -756,9 +845,10 @@ class ClassicGame(Game):
 
 
 class DuelGame(Game):
-    def __init__(self, context, screen, initial_time=200):
+    def __init__(self, context, screen, initial_time=60):
         self.loser = None
         self.end_level_timer = None
+        self.sudden_death = False
         super().__init__(context, screen, initial_time)
         
     def initialize_level(self):
@@ -774,6 +864,8 @@ class DuelGame(Game):
             self.context.menu.open('mp_gameover_winsp2')
 
     def loop(self, time):
+        if self.sudden_death:
+            self.level.matrix.sudden_death_loop(self, time)
         if self.end_level_timer != None:
             self.end_level_timer -= time
             if self.end_level_timer <= 0:
@@ -783,7 +875,7 @@ class DuelGame(Game):
     def draw_gamebar(self, time):
         self.time -= time
         if self.time <= 0: 
-            # TODO trigger sudden death
+            self.sudden_death = True
             timer = 'SUDDEN DEATH'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
