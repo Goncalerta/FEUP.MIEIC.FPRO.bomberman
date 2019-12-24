@@ -15,6 +15,9 @@ pygame.init()
 
 
 ASSETS = {
+    'icon': pygame.image.load('assets/icon.png'),
+    'title_screen': pygame.image.load('assets/title_screen.png'),
+    'menu_pointer': pygame.image.load('assets/menu_pointer.png'),
     'grass': pygame.image.load('assets/grass.png'),
     'wall': pygame.image.load('assets/wall.png'),
     'box': pygame.image.load('assets/box.png'),
@@ -36,9 +39,7 @@ ASSETS = {
     'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
     'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
     'enemy': pygame.image.load('assets/enemy.png'),
-    'title_screen': pygame.image.load('assets/title_screen.png'),
-    'menu_pointer': pygame.image.load('assets/menu_pointer.png'),
-    'falling_wall': pygame.image.load('assets/falling.png')
+    'falling_wall': pygame.image.load('assets/falling.png'),
 }
 
 DEFAULT_SINGLEPLAYER_CONTROLS = {
@@ -1051,6 +1052,8 @@ class Context:
         self.size = 650, 780
         self.speed = [2, 2]
         self.screen = pygame.display.set_mode(self.size)
+        pygame.display.set_caption('Bomberman')
+        pygame.display.set_icon(ASSETS['icon'])
         self.clock = pygame.time.Clock()
         self.game = None
         self.menu = Menu(self.screen, self)
