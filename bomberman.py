@@ -903,10 +903,12 @@ class ClassicGame(Game):
 
 
 class DuelGame(Game):
-    def __init__(self, context, screen, initial_time=60):
+    def __init__(self, context, screen, initial_time=90):
         self.loser = None
         self.end_level_timer = None
         self.sudden_death = False
+        self.p1_wins = 0
+        self.p2_wins = 0
         super().__init__(context, screen, initial_time)
         
     def initialize_level(self):
@@ -917,9 +919,17 @@ class DuelGame(Game):
 
     def trigger_level_over(self):
         if self.loser != self.level.players[0]:
+            self.p1_wins += 1
             self.context.menu.open('mp_gameover_winsp1')
         elif self.loser != self.level.players[1]:
+            self.p2_wins += 1
             self.context.menu.open('mp_gameover_winsp2')
+
+    def play_again(self):
+        self.loser = None
+        self.end_level_timer = None 
+        self.sudden_death = None
+        self.initialize_level()
 
     def loop(self, time):
         if self.sudden_death:
@@ -937,10 +947,17 @@ class DuelGame(Game):
             timer = 'SUDDEN DEATH'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
-            timer = 'TIME: {:03d}'.format(int(self.time))
+            timer = 'TIME: {:02d}'.format(int(self.time))
             timer = GAME_FONT.render(timer, True, (0, 0, 0))
 
+        p1_wins = 'P1 WINS: {:02d}'.format(int(self.p1_wins))
+        p1_wins = GAME_FONT.render(p1_wins, True, (29, 112, 250))
+        p2_wins = 'P2 WINS: {:02d}'.format(int(self.p2_wins))
+        p2_wins = GAME_FONT.render(p2_wins, True, (240, 30, 0))
+
+        self.screen.blit(p1_wins, p1_wins.get_rect(left=30, centery=35))
         self.screen.blit(timer, timer.get_rect(right=610, centery=35))
+        self.screen.blit(p2_wins, p2_wins.get_rect(left=30, centery=95))        
 
     def player_died(self, player):
         if self.end_level_timer == None:
@@ -987,11 +1004,11 @@ class Menu:
             MenuOption(screen, 'Main menu', lambda: self.open('main'))
           ],
           'mp_gameover_winsp1': [
-            MenuOption(screen, 'Play Again', self.context.restart_game), 
+            MenuOption(screen, 'Play Again', self.context.play_again), 
             MenuOption(screen, 'Main menu', lambda: self.open('main'))
           ],
           'mp_gameover_winsp2': [
-            MenuOption(screen, 'Play Again', self.context.restart_game), 
+            MenuOption(screen, 'Play Again', self.context.play_again), 
             MenuOption(screen, 'Main menu', lambda: self.open('main'))
           ],
         }
@@ -1076,6 +1093,10 @@ class Context:
             self.game = ClassicGame(self, self.screen)
         else:
             self.game = DuelGame(self, self.screen)
+
+    def play_again(self):
+        self.menu.is_open = False
+        self.game.play_again()
 
     def loop(self):
         while True:
