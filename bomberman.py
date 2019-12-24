@@ -304,6 +304,8 @@ class Enemy:
             weights = [6, 8, 6, 80]
         elif self.direction == 'right':
             weights = [6, 80, 6, 8]
+        elif self.direction == 'idle':
+            weights = [25, 25, 25, 25]
 
         # [UP, RIGHT, DOWN, LEFT]
         available = [True, True, True, True]
@@ -327,12 +329,13 @@ class Enemy:
             aq += w
             if rnd < aq:
                 self.direction = direction
-                break
+                return
+        self.direction = 'idle'
 
     def move(self, lvl, distance):
         cx, cy = self.pos
         rx, ry = round(self.pos[0]), round(self.pos[1])
-        if ry - cy == 0 and rx - cx == 0:
+        if (ry - cy == 0 and rx - cx == 0) or self.direction == 'idle':
             self.maybe_try_change_direction(lvl)
 
         if self.direction == 'up':
@@ -364,6 +367,7 @@ class Enemy:
             else:
                 self.pos[0] += distance
 
+        # TODO correct reaction to bombs from the enemies
         #for bomb in lvl.bombs.values():
         #    if bomb.collides(*new_pos):
         #        if calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos):
