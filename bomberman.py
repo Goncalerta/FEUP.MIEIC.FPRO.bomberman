@@ -663,10 +663,9 @@ class BlockMatrix:
             for flame in game.level.flames:
                 if flame.pos == self.falling:
                     flame.timer = 0
-            for pos, bom in game.level.bombs.items():
-                # TODO stop bombs
-                pass
-            # TODO animation to destroy BOX blocks
+            if self.falling != None:
+                if tuple(self.falling) in game.level.bombs:
+                    del game.level.bombs[tuple(self.falling)]
             self.drop_next_wall()
         self.sudden_death_fallen_blocks = fallen, current
 
@@ -842,11 +841,7 @@ class Level:
                           Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP,
                         ])
                         matrix[y][x] = powerup
-        matrix[1][4] = Block.POWERUP_BLAST
-        matrix[1][5] = Block.BOX
-        matrix[1][6] = Block.POWERUP_BOMBUP
-        matrix[1][7] = Block.BOX_POWERUP_BLAST
-        matrix[1][8] = Block.BOX_POWERUP_BOMBUP
+
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players)
 
@@ -947,7 +942,7 @@ class ClassicGame(Game):
 
 
 class DuelGame(Game):
-    def __init__(self, context, screen, initial_time=2):
+    def __init__(self, context, screen, initial_time=90):
         self.loser = None
         self.end_level_timer = None
         self.sudden_death = False
