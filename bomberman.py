@@ -567,6 +567,8 @@ class BlockMatrix:
         for i, row in enumerate(self.matrix):
             for j, block in enumerate(row):
                 block.draw(canvas, j, i, lvl)
+        if self.falling != None:
+            canvas.draw(ASSETS['falling_wall'], self.falling)
 
     def is_solid(self, x, y):
         return self.matrix[y][x] in [
@@ -576,7 +578,7 @@ class BlockMatrix:
     
     def drop_wall(self, x, y):
         self.falling = [x, y]
-        self.matrix[y][x] = Block.FALLING_WALL
+        #self.matrix[y][x] = Block.FALLING_WALL
     
     def drop_next_wall(self):
         if self.falling == None:
@@ -840,7 +842,11 @@ class Level:
                           Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP,
                         ])
                         matrix[y][x] = powerup
-
+        matrix[1][4] = Block.POWERUP_BLAST
+        matrix[1][5] = Block.BOX
+        matrix[1][6] = Block.POWERUP_BOMBUP
+        matrix[1][7] = Block.BOX_POWERUP_BLAST
+        matrix[1][8] = Block.BOX_POWERUP_BOMBUP
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players)
 
