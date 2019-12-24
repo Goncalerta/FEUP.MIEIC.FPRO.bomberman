@@ -272,7 +272,7 @@ class VerticalFlame(Flame):
 
 class Enemy:
     # Enemy velocity in blocks per second
-    VELOCITY = 1.70
+    VELOCITY = 1.60
 
     def __init__(self, game, x, y, direction):
         self.game = game
