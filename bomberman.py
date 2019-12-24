@@ -267,7 +267,7 @@ class Enemy:
     def loop(self, lvl, time):
         self.draw(lvl.canvas)
         if self.alive:
-            self.move(lvl, time)
+            self.move(lvl, self.VELOCITY*time)
             for f in lvl.flames:
                 if f.collides(*self.pos):
                     self.die(lvl)
@@ -294,35 +294,80 @@ class Enemy:
           or lvl.matrix.check_collides(*new_pos)
         )
 
-    def move(self, lvl, time):
-        new_pos = self.pos[:]
-        distance = self.VELOCITY * time
+    def maybe_try_change_direction(self, lvl):
+        x, y = self.pos
+        if self.direction == 'up':
+            weights = [80, 6, 8, 6]
+        elif self.direction == 'down':
+            weights = [8, 6, 80, 6]
+        elif self.direction == 'left':
+            weights = [6, 8, 6, 80]
+        elif self.direction == 'right':
+            weights = [6, 80, 6, 8]
+
+        # [UP, RIGHT, DOWN, LEFT]
+        available = [True, True, True, True]
+        for i, pos in enumerate([(x, y-1), (x+1, y), (x, y+1), (x-1, y)]):
+            for bomb in lvl.bombs.values():
+                if bomb.collides(*pos):
+                    available[i] = False
+                    break
+            available[i] = available[i] and not (
+                lvl.matrix.is_solid(*pos) 
+                or lvl.matrix.is_goal(*pos)
+            )
+        total = sum([w for w, a in zip(weights, available) if a])
+        weights = [w/total if a else 0 for w, a in zip(weights, available)]
+        rnd = random.random()
+        aq = 0
+        
+        for w, direction in zip(weights, ['up', 'right', 'down', 'left']):
+            if w == 0:
+                continue
+            aq += w
+            if rnd < aq:
+                self.direction = direction
+                break
+
+    def move(self, lvl, distance):
+        cx, cy = self.pos
+        rx, ry = round(self.pos[0]), round(self.pos[1])
+        if ry - cy == 0 and rx - cx == 0:
+            self.maybe_try_change_direction(lvl)
 
         if self.direction == 'up':
-            new_pos[1] -= distance
+            if -distance <= ry - cy < 0:
+                self.pos[1] = ry
+                self.maybe_try_change_direction(lvl)
+                self.move(lvl, distance - cy + ry)
+            else:
+                self.pos[1] -= distance
         elif self.direction == 'down':
-            new_pos[1] += distance
+            if 0 < ry - cy <= distance:
+                self.pos[1] = ry
+                self.maybe_try_change_direction(lvl)
+                self.move(lvl, distance - ry + cy)
+            else:
+                self.pos[1] += distance
         elif self.direction == 'left':
-            new_pos[0] -= distance
+            if -distance <= rx - cx < 0:
+                self.pos[0] = rx
+                self.maybe_try_change_direction(lvl)
+                self.move(lvl, distance - cx + rx)
+            else:
+                self.pos[0] -= distance
         elif self.direction == 'right':
-            new_pos[0] += distance
-        
-        if self.should_change_direction(lvl, new_pos):
-            if self.direction == 'up': 
-                self.direction = 'down'
-            elif self.direction == 'down': 
-                self.direction = 'up'
-            elif self.direction == 'right': 
-                self.direction = 'left'
-            elif self.direction == 'left': 
-                self.direction = 'right'
-            return
+            if 0 < rx - cx <= distance:
+                self.pos[0] = rx
+                self.maybe_try_change_direction(lvl)
+                self.move(lvl, distance - rx + cx)
+            else:
+                self.pos[0] += distance
 
-        for bomb in lvl.bombs.values():
-            if bomb.collides(*new_pos):
-                if calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos):
-                    return 
-        self.pos = new_pos
+        #for bomb in lvl.bombs.values():
+        #    if bomb.collides(*new_pos):
+        #        if calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos):
+        #            return 
 
     def collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
@@ -678,7 +723,7 @@ class Level:
         # 1: Boxes
         # 2: Goal
         # 3: Enemies
-        # 4: Powerups TODO
+        # 4: Powerups
         elements = [0]*grass_n + [1]*boxes_n + [2] + [3]*enemies_n + [4]
         enemies = []
         random.shuffle(elements)
@@ -726,7 +771,7 @@ class Level:
         # 1: Boxes
         # 2: Goal
         # 3: Enemies
-        # 4: Powerups TODO
+        # 4: Powerups
         elements = [0]*grass_n + [1]*boxes_n + [4]*powerups_n
         random.shuffle(elements)
 
@@ -782,7 +827,7 @@ class Game:
 
 
 class ClassicGame(Game):
-    def __init__(self, context, screen, initial_time=200, lives=0):
+    def __init__(self, context, screen, initial_time=200, lives=3):
         self.score = 0
         self.stage = 1
         self.lives = lives
