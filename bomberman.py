@@ -183,8 +183,7 @@ class Flame:
         if not (0 <= x <= len(matrix[0]) and 0 <= y <= len(matrix)):
             return False
         block = matrix[y][x]
-        if block in [Block.GRASS, Block.FALLING_WALL, Block.GOAL]:
-            # TODO shouldn't goal be considered as affecting the environment?
+        if block in [Block.GRASS, Block.FALLING_WALL]:
             return False
         if block in [Block.BOX]:
             matrix[y][x] = Block.GRASS
@@ -282,10 +281,11 @@ class Enemy:
         self.alive = True
         self.score_worth = 50
         self.time_to_disappear = None
-    
+
     def loop(self, lvl, time):
         self.draw(lvl.canvas)
         if self.alive:
+            self.check_has_to_change_direction_due_to_bomb(lvl)
             self.move(lvl, self.VELOCITY*time)
             for f in lvl.flames:
                 if f.collides(*self.pos):
@@ -300,21 +300,35 @@ class Enemy:
         self.game.score += self.score_worth
         self.time_to_disappear = 2.5
     
-    def should_change_direction(self, lvl, new_pos):
-        for bomb in lvl.bombs.values():
-            if bomb.collides(*new_pos):
-                if calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos):
-                    return True
-        return (
-          (
-            lvl.matrix.check_enters_goal(*new_pos) 
-            and not lvl.matrix.check_enters_goal(*self.pos)
-          )
-          or lvl.matrix.check_collides(*new_pos)
-        )
+    def check_has_to_change_direction_due_to_bomb(self, lvl):
+        if self.direction == 'up':
+            bx, fx = self.pos[0], self.pos[0]
+            by, fy = math.ceil(self.pos[1]), math.floor(self.pos[1])
+            b = 'down'
+        elif self.direction == 'down':
+            bx, fx = self.pos[0], self.pos[0]
+            by, fy = math.floor(self.pos[1]), math.ceil(self.pos[1])
+            b = 'up'
+        elif self.direction == 'left':
+            bx, fx = math.ceil(self.pos[0]), math.floor(self.pos[0])
+            by, fy = self.pos[1], self.pos[1]
+            b = 'right'
+        elif self.direction == 'right':
+            bx, fx = math.floor(self.pos[0]), math.ceil(self.pos[0])
+            by, fy = self.pos[1], self.pos[1]
+            b = 'left'
+        elif self.direction == 'idle':
+            return
+
+        if (fx, fy) not in lvl.bombs:
+            return
+        elif (bx, by) not in lvl.bombs:
+            self.direction = b
+        else:
+            self.direction = 'idle'
 
     def maybe_try_change_direction(self, lvl):
-        x, y = self.pos
+        x, y = int(self.pos[0]), int(self.pos[1])
         if self.direction == 'up':
             weights = [80, 6, 8, 6]
         elif self.direction == 'down':
@@ -385,12 +399,6 @@ class Enemy:
                 self.move(lvl, distance - rx + cx)
             else:
                 self.pos[0] += distance
-
-        # TODO correct reaction to bombs from the enemies
-        #for bomb in lvl.bombs.values():
-        #    if bomb.collides(*new_pos):
-        #        if calculate_distance(bomb.pos, new_pos) < calculate_distance(bomb.pos, self.pos):
-        #            return 
 
     def collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
@@ -645,6 +653,7 @@ class BlockMatrix:
             for pos, bom in game.level.bombs.items():
                 # TODO stop bombs
                 pass
+            # TODO animation to destroy BOX blocks
             self.drop_next_wall()
         self.sudden_death_fallen_blocks = fallen, current
 
