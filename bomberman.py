@@ -645,8 +645,19 @@ class BlockMatrix:
             fallen += 1
             current -= 1
             for player in game.level.players:
-                # TODO kill players
-                pass
+                if self.falling == None:
+                    break
+                wx, wy = self.falling
+                px, py = player.pos
+                if -0.9 <= px - wx <= 0.9 and -0.9 <= py - wy <= 0.9:
+                    player.die()
+                elif -1 <= px - wx <= 1 and -0.9 <= py - wy <= 0.9:
+                    player.pos[0] = round(player.pos[0])
+                elif -0.9 <= px - wx <= 0.9 and -1 <= py - wy <= 1:
+                    player.pos[1] = round(player.pos[1])
+                elif -1 <= px - wx <= 1 and -1 <= py - wy <= 1:
+                    player.pos[0] = round(player.pos[0])
+                    player.pos[1] = round(player.pos[1])
             for flame in game.level.flames:
                 if flame.pos == self.falling:
                     flame.timer = 0
@@ -930,7 +941,7 @@ class ClassicGame(Game):
 
 
 class DuelGame(Game):
-    def __init__(self, context, screen, initial_time=90):
+    def __init__(self, context, screen, initial_time=2):
         self.loser = None
         self.end_level_timer = None
         self.sudden_death = False
