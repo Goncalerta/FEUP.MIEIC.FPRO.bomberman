@@ -38,6 +38,10 @@ ASSETS = {
     'flame_center': pygame.image.load('assets/explosion_center.png'),
     'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
     'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
+    'flame_end_left': pygame.image.load('assets/explosion_end_left.png'),
+    'flame_end_right': pygame.image.load('assets/explosion_end_right.png'),
+    'flame_end_up': pygame.image.load('assets/explosion_end_up.png'),
+    'flame_end_down': pygame.image.load('assets/explosion_end_down.png'),
     'enemy': pygame.image.load('assets/enemy.png'),
     'falling_wall': pygame.image.load('assets/falling.png'),
 }
@@ -223,6 +227,8 @@ class CenterFlame(Flame):
 class HorizontalFlame(Flame):
     def __init__(self, lvl, x, y, flames_list, radius, timer, left_to_right):
         super().__init__(lvl, x, y, timer)
+        self.radius = radius 
+        self.left_to_right = left_to_right
 
         if radius > 1 and self.should_spawn:
             if left_to_right:
@@ -234,11 +240,18 @@ class HorizontalFlame(Flame):
                 flames_list.append(flame)
 
     def draw(self, canvas):
-        canvas.draw(ASSETS['flame_horizontal'], self.pos)
+        if self.radius == 1 and self.left_to_right:
+            canvas.draw(ASSETS['flame_end_right'], self.pos)
+        elif self.radius == 1 and not self.left_to_right:
+            canvas.draw(ASSETS['flame_end_left'], self.pos)
+        else:
+            canvas.draw(ASSETS['flame_horizontal'], self.pos)
 
 class VerticalFlame(Flame):
     def __init__(self, lvl, x, y, flames_list, radius, timer, up_to_down):
         super().__init__(lvl, x, y, timer)
+        self.radius = radius 
+        self.up_to_down = up_to_down
 
         if radius > 1 and self.should_spawn:
             if up_to_down:
@@ -250,7 +263,12 @@ class VerticalFlame(Flame):
                 flames_list.append(flame)
 
     def draw(self, canvas):
-        canvas.draw(ASSETS['flame_vertical'], self.pos)
+        if self.radius == 1 and self.up_to_down:
+            canvas.draw(ASSETS['flame_end_down'], self.pos)
+        elif self.radius == 1 and not self.up_to_down:
+            canvas.draw(ASSETS['flame_end_up'], self.pos)
+        else:
+            canvas.draw(ASSETS['flame_vertical'], self.pos)
 
 
 class Enemy:
