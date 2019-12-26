@@ -411,7 +411,7 @@ class Player:
     # Player velocity in blocks per second
     VELOCITY = 1.75
 
-    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=2, bomb_blast_radius=2):
+    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=1, bomb_blast_radius=2):
         self.pos = [x, y]
         self.sprite = sprite
         self.direction = 'down'
@@ -1148,9 +1148,9 @@ class Context:
     def __init__(self):
         self.size = 650, 780
         self.speed = [2, 2]
-        self.screen = pygame.display.set_mode(self.size)
         pygame.display.set_caption('Bomberman')
         pygame.display.set_icon(ASSETS['icon'])
+        self.screen = pygame.display.set_mode(self.size)
         self.clock = pygame.time.Clock()
         self.game = None
         self.menu = Menu(self.screen, self)
