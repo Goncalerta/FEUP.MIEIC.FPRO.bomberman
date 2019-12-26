@@ -80,7 +80,7 @@ SELECT_KEY = pygame.K_RETURN
 UP_KEY = pygame.K_UP 
 DOWN_KEY = pygame.K_DOWN
 
-GAME_FONT = pygame.font.Font(None, 58) 
+GAME_FONT = pygame.font.Font('assets/font/PixelMiners-KKal.otf', 32) 
 
 
 def list_colliding_coordinates(x, y):
@@ -948,17 +948,17 @@ class ClassicGame(Game):
             timer = 'TIME\'S UP'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
-            timer = 'TIME: {:03d}'.format(int(self.time))
-            timer = GAME_FONT.render(timer, True, (0, 0, 0))
+            timer = 'TIME:  {:03d}'.format(int(self.time))
+            timer = GAME_FONT.render(timer, True, (30, 30, 30))
         
-        score = 'SCORE: {:04d}'.format(self.score)
-        score = GAME_FONT.render(score, True, (0, 0, 0))
+        score = 'SCORE:  {:04d}'.format(self.score)
+        score = GAME_FONT.render(score, True, (30, 30, 30))
 
-        stage = 'STAGE: {:02d}'.format(self.stage)
-        stage = GAME_FONT.render(stage, True, (0, 0, 0))
+        stage = 'STAGE:  {:02d}'.format(self.stage)
+        stage = GAME_FONT.render(stage, True, (30, 30, 30))
         
-        lives = 'LIVES: {:02d}'.format(self.lives)
-        lives = GAME_FONT.render(lives, True, (0, 0, 0))
+        lives = 'LIVES:  {:02d}'.format(self.lives)
+        lives = GAME_FONT.render(lives, True, (30, 30, 30))
 
         self.screen.blit(stage, score.get_rect(left=30, centery=35))
         self.screen.blit(timer, lives.get_rect(right=610, centery=35))
@@ -1015,12 +1015,12 @@ class DuelGame(Game):
             timer = 'SUDDEN DEATH'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
-            timer = 'TIME: {:02d}'.format(int(self.time))
-            timer = GAME_FONT.render(timer, True, (0, 0, 0))
+            timer = 'TIME:  {:02d}'.format(int(self.time))
+            timer = GAME_FONT.render(timer, True, (30, 30, 30))
 
-        p1_wins = 'P1 WINS: {:02d}'.format(int(self.p1_wins))
+        p1_wins = 'P1 WINS:  {:02d}'.format(int(self.p1_wins))
         p1_wins = GAME_FONT.render(p1_wins, True, (29, 112, 250))
-        p2_wins = 'P2 WINS: {:02d}'.format(int(self.p2_wins))
+        p2_wins = 'P2 WINS:  {:02d}'.format(int(self.p2_wins))
         p2_wins = GAME_FONT.render(p2_wins, True, (240, 30, 0))
 
         self.screen.blit(p1_wins, p1_wins.get_rect(left=30, centery=35))
