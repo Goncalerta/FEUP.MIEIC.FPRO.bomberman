@@ -34,7 +34,12 @@ ASSETS = {
     'player2_down': pygame.image.load('assets/player2_down.png'),
     'player2_left': pygame.image.load('assets/player2_left.png'),
     'player2_right': pygame.image.load('assets/player2_right.png'),
-    'bomb': pygame.image.load('assets/bomb.png'),
+    'bomb': [
+      pygame.image.load('assets/bomb/bomb_{}.png'.format(i)) for i in range(1, 11)
+    ],
+    'exploding_box': [
+      pygame.image.load('assets/exploding_box/exploding_box_{}.png'.format(i)) for i in range(1, 7)
+    ],
     'flame_center': pygame.image.load('assets/explosion_center.png'),
     'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
     'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
@@ -155,7 +160,8 @@ class Bomb:
         lvl.bombs[self.pos] = None
 
     def draw(self, canvas):
-        canvas.draw(ASSETS['bomb'], self.pos)
+        current_frame = int((3-self.timer)//0.3)
+        canvas.draw(ASSETS['bomb'][current_frame], self.pos)
 
 
 class Flame:
@@ -182,23 +188,11 @@ class Flame:
         matrix = lvl.matrix.matrix
         if not (0 <= x <= len(matrix[0]) and 0 <= y <= len(matrix)):
             return False
-        block = matrix[y][x]
-        if block in [Block.GRASS, Block.FALLING_WALL]:
-            return False
-        if block in [Block.BOX]:
-            matrix[y][x] = Block.GRASS
-        elif block in [Block.POWERUP_BLAST, Block.POWERUP_BOMBUP, Block.POWERUP_LIFE]:
-            matrix[y][x] = Block.GRASS
-            return False
-        elif block == Block.BOX_GOAL:
-            matrix[y][x] = Block.GOAL
-        elif block == Block.BOX_POWERUP_BOMBUP:
-            matrix[y][x] = Block.POWERUP_BOMBUP
-        elif block == Block.BOX_POWERUP_BLAST:
-            matrix[y][x] = Block.POWERUP_BLAST
-        elif block == Block.BOX_POWERUP_LIFE:
-            matrix[y][x] = Block.POWERUP_LIFE
-        return True
+        block = lvl.matrix.explode_block(x, y)
+        return block in [
+          Block.BOX, Block.BOX_GOAL, Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_LIFE,
+          Block.WALL, Block.GOAL
+        ]
     
     def collides(self, x, y):
         return self.pos[0] - 0.5 <= x <= self.pos[0] + 0.5 and self.pos[1] - 0.5 <= y <= self.pos[1] + 0.5
@@ -538,6 +532,7 @@ class BlockMatrix:
         self.falling = None
         self.falling_direction = 'right'
         self.move_until = 9
+        self.exploding = []
         if matrix is None:
             self.matrix = [
                 [1 for _ in range(13)],
@@ -563,12 +558,43 @@ class BlockMatrix:
             x, y = goal
             self.matrix[y][x] = Block.BOX_GOAL
 
-    def draw(self, canvas, lvl, fallen_state=0):
+    def draw(self, time, canvas, lvl, fallen_state=0):
         for i, row in enumerate(self.matrix):
             for j, block in enumerate(row):
                 block.draw(canvas, j, i, lvl)
         if self.falling != None:
             canvas.draw(ASSETS['falling_wall'], self.falling)
+        for i, (x, y, e_time) in enumerate(self.exploding):
+            e_time -= time 
+            if e_time <= 0:
+                del self.exploding[i]
+                continue
+            self.exploding[i] = (x, y, e_time)
+            current_frame = int((0.375-e_time)//0.0625)
+            current_frame = ASSETS['exploding_box'][current_frame]
+            canvas.draw(current_frame, (x, y))
+
+    def explode_block(self, x, y):
+        block = self.matrix[y][x]
+        
+        if block in [Block.POWERUP_BLAST, Block.POWERUP_BOMBUP, Block.POWERUP_LIFE]:
+            self.matrix[y][x] = Block.GRASS
+        elif block == Block.BOX:
+            self.exploding.append((x, y, 0.375))
+            self.matrix[y][x] = Block.GRASS
+        elif block == Block.BOX_GOAL:
+            self.exploding.append((x, y, 0.375))
+            self.matrix[y][x] = Block.GOAL
+        elif block == Block.BOX_POWERUP_BOMBUP:
+            self.exploding.append((x, y, 0.375))
+            self.matrix[y][x] = Block.POWERUP_BOMBUP
+        elif block == Block.BOX_POWERUP_BLAST:
+            self.exploding.append((x, y, 0.375))
+            self.matrix[y][x] = Block.POWERUP_BLAST
+        elif block == Block.BOX_POWERUP_LIFE:
+            self.exploding.append((x, y, 0.375))
+            self.matrix[y][x] = Block.POWERUP_LIFE
+        return block
 
     def is_solid(self, x, y):
         return self.matrix[y][x] in [
@@ -696,7 +722,7 @@ class BlockMatrix:
         )
 
     def check_bomb_placeable(self, x, y):
-        self.matrix[y][x] in [Block.GRASS, Block.FALLING_WALL]
+        return self.matrix[y][x] in [Block.GRASS, Block.FALLING_WALL]
 
     def check_collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
@@ -725,7 +751,7 @@ class Level:
         self.enemies = enemies
 
     def loop(self, time):
-        self.matrix.draw(self.canvas, self)
+        self.matrix.draw(time, self.canvas, self)
         for player in self.players:
             player.loop(self, time)
         for bomb in self.bombs.values():
@@ -745,7 +771,7 @@ class Level:
 
     def try_place_bomb(self, x, y, placer):
         pos = round(x), round(y)
-        if pos not in self.bombs and self.matrix.check_bomb_placeable(x, y):
+        if pos not in self.bombs and self.matrix.check_bomb_placeable(*pos):
             self.bombs[pos] = Bomb(*pos, placer, placer.bomb_blast_radius)
 
     def placed_bombs(self, player):
