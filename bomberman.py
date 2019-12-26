@@ -695,6 +695,9 @@ class BlockMatrix:
           or self.is_goal(xh, yh)
         )
 
+    def check_bomb_placeable(self, x, y):
+        self.matrix[y][x] in [Block.GRASS, Block.FALLING_WALL]
+
     def check_collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return self.is_solid(xl, yl) or self.is_solid(xl, yh) or self.is_solid(xh, yl) or self.is_solid(xh, yh)
@@ -742,7 +745,7 @@ class Level:
 
     def try_place_bomb(self, x, y, placer):
         pos = round(x), round(y)
-        if pos not in self.bombs:
+        if pos not in self.bombs and self.matrix.check_bomb_placeable(x, y):
             self.bombs[pos] = Bomb(*pos, placer, placer.bomb_blast_radius)
 
     def placed_bombs(self, player):
@@ -1015,7 +1018,7 @@ class MenuOption:
         label = GAME_FONT.render(self.label, True, (255, 255, 255))
 
         if sel:
-            self.screen.blit(cursor, cursor.get_rect(left=100, centery=y))
+            self.screen.blit(cursor, cursor.get_rect(left=110, centery=y))
         self.screen.blit(label, label.get_rect(left=175, centery=y))
 
 
