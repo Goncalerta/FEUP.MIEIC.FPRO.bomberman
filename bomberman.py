@@ -37,6 +37,7 @@ ASSETS = {
     'bomb': [
       pygame.image.load('assets/bomb/bomb_{}.png'.format(i)) for i in range(1, 11)
     ],
+    'bomb_chaining': pygame.image.load('assets/chaining_bomb.png'),
     'exploding_box': [
       pygame.image.load('assets/exploding_box/exploding_box_{}.png'.format(i)) for i in range(1, 7)
     ],
@@ -135,6 +136,7 @@ class Bomb:
         self.timer = timer
         self.radius = radius
         self.placer = placer
+        self.chaining = False
     
     def loop(self, lvl, time):
         self.draw(lvl.canvas)
@@ -160,8 +162,11 @@ class Bomb:
         lvl.bombs[self.pos] = None
 
     def draw(self, canvas):
-        current_frame = int((3-self.timer)//0.3)
-        canvas.draw(ASSETS['bomb'][current_frame], self.pos)
+        if self.chaining:
+            canvas.draw(ASSETS['bomb_chaining'], self.pos)
+        else:
+            current_frame = int((3-self.timer)//0.3)
+            canvas.draw(ASSETS['bomb'][current_frame], self.pos)
 
 
 class Flame:
@@ -172,8 +177,9 @@ class Flame:
 
         if lvl.bombs.get(tuple(self.pos), None) != None:
             bomb = lvl.bombs[tuple(self.pos)]
-            if bomb.timer > 0.125:
-                bomb.timer = 0.125
+            bomb.chaining = True
+            if bomb.timer > 0.25:
+                bomb.timer = 0.25
     
     def loop(self, lvl, time):
         self.timer -= time
@@ -405,7 +411,7 @@ class Player:
     # Player velocity in blocks per second
     VELOCITY = 1.75
 
-    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=1, bomb_blast_radius=2):
+    def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=2, bomb_blast_radius=2):
         self.pos = [x, y]
         self.sprite = sprite
         self.direction = 'down'
@@ -752,16 +758,16 @@ class Level:
 
     def loop(self, time):
         self.matrix.draw(time, self.canvas, self)
-        for player in self.players:
-            player.loop(self, time)
+        for flame in self.flames:
+            flame.loop(self, time)
         for bomb in self.bombs.values():
             bomb.loop(self, time)
         # Remove items that have a None value
         for k in list(self.bombs.keys()):
             if self.bombs[k] == None:
                 del self.bombs[k]
-        for flame in self.flames:
-            flame.loop(self, time)
+        for player in self.players:
+            player.loop(self, time)    
         for enemy in self.enemies:
             enemy.loop(self, time)
 
