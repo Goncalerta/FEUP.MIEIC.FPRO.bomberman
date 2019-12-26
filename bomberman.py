@@ -786,7 +786,7 @@ class Level:
     NUMBER_OF_RANDOMIZABLE_TILES_MP = NUMBER_OF_TILES - 79
 
     @staticmethod
-    def generate_singleplayer(game, canvas, enemies_limits=[3, 5], boxes_limits=[15, 35]):
+    def generate_singleplayer(game, canvas, enemies_limits=[3, 5], boxes_limits=[15, 35], max_bombs=1, bomb_blast_radius=2):
         enemies_n = random.randrange(enemies_limits[0], enemies_limits[1]+1)
         boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
         # Doesn't include grass in spawn area
@@ -802,7 +802,7 @@ class Level:
         random.shuffle(elements)
 
         matrix = [[None]*13 for _ in range(13)]
-        players = [Player(game, 1, 1)]
+        players = [Player(game, 1, 1, max_bombs=max_bombs, bomb_blast_radius=bomb_blast_radius)]
         
         for x in range(0, 13):
             for y in range(0, 13): 
@@ -904,6 +904,8 @@ class ClassicGame(Game):
         self.score = 0
         self.stage = 1
         self.lives = lives
+        self.max_bombs = 1
+        self.bomb_blast_radius = 2
 
         self.restart_level_timer = None
         self.start_next_level_timer = None
@@ -915,7 +917,9 @@ class ClassicGame(Game):
         self.time = self.initial_time
 
         canvas = LevelCanvas(self.screen, (0, 130))
-        self.level = Level.generate_singleplayer(self, canvas)
+        self.level = Level.generate_singleplayer(self, canvas, 
+          max_bombs=self.max_bombs, bomb_blast_radius=self.bomb_blast_radius
+        )
 
     def trigger_level_failed(self):
         self.lives -= 1
@@ -927,6 +931,8 @@ class ClassicGame(Game):
     
     def trigger_level_complete(self):
         self.stage += 1
+        self.bomb_blast_radius = self.level.players[0].bomb_blast_radius
+        self.max_bombs = self.level.players[0].max_bombs
         self.initialize_level()
 
     def loop(self, time):
