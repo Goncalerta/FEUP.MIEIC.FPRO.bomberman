@@ -127,6 +127,8 @@ class Block(Enum):
                 Block.FALLING_WALL: 'falling_wall'
             }
             img = ASSETS[assets_indexes[self]]
+        if self in [Block.POWERUP_LIFE, Block.POWERUP_BLAST, Block.POWERUP_BOMBUP]:
+            canvas.draw(ASSETS['grass'], (x,y))
         canvas.draw(img, (x, y))
 
 
