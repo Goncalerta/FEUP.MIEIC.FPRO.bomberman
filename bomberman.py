@@ -153,8 +153,7 @@ class Bomb:
     # Used to check whether or not the placer of the bomb can still
     # walk through it with no colision.
     def collides_closer(self, x, y):
-        rx, ry = round(x), round(y)
-        return -0.375 <= x - self.pos[0] <= 0.375 and -0.375 <= y - self.pos[1] <= 0.375
+        return -0.45 <= x - self.pos[0] <= 0.45 and -0.45 <= y - self.pos[1] <= 0.45
     
     def detonate(self, lvl):
         x, y = self.pos
@@ -332,13 +331,13 @@ class Enemy:
     def maybe_try_change_direction(self, lvl):
         x, y = int(self.pos[0]), int(self.pos[1])
         if self.direction == 'up':
-            weights = [80, 6, 8, 6]
+            weights = [87, 3, 7, 3]
         elif self.direction == 'down':
-            weights = [8, 6, 80, 6]
+            weights = [7, 3, 87, 3]
         elif self.direction == 'left':
-            weights = [6, 8, 6, 80]
+            weights = [3, 7, 3, 87]
         elif self.direction == 'right':
-            weights = [6, 80, 6, 8]
+            weights = [3, 87, 3, 7]
         elif self.direction == 'idle':
             weights = [25, 25, 25, 25]
 
@@ -955,7 +954,8 @@ class ClassicGame(Game):
         super().loop(time)
         
     def draw_gamebar(self, time):
-        self.time -= time
+        if self.restart_level_timer == None and self.start_next_level_timer == None:
+            self.time -= time
         if self.time <= 0: 
             if self.restart_level_timer == None and self.start_next_level_timer == None:
                 self.restart_level_timer = 2.5
