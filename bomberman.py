@@ -24,6 +24,9 @@ ASSETS = {
     'goal_closed': pygame.image.load('assets/goal_closed.png'),
     'goal_open': pygame.image.load('assets/goal_open.png'),
     'powerup_life': pygame.image.load('assets/powerup_life.png'),
+    'goal_opening': [
+        pygame.image.load('assets/goal_opening/goal_opening_{}.png'.format(i)) for i in range(1, 6)
+    ],
     'powerup_blast': pygame.image.load('assets/powerup_blast.png'),
     'powerup_bombup': pygame.image.load('assets/powerup_bombup.png'),
     'player1_up': pygame.image.load('assets/player1_up.png'),
@@ -97,36 +100,33 @@ class Block(Enum):
     WALL = 1
     BOX = 2
     BOX_GOAL = 3
-    GOAL = 4
-    BOX_POWERUP_LIFE = 5
-    POWERUP_LIFE = 6
-    BOX_POWERUP_BLAST = 7
-    POWERUP_BLAST = 8
-    BOX_POWERUP_BOMBUP = 9
-    POWERUP_BOMBUP = 10
-    FALLING_WALL = 11
+    GOAL_OPEN = 4
+    GOAL_CLOSED = 5
+    BOX_POWERUP_LIFE = 6
+    POWERUP_LIFE = 7
+    BOX_POWERUP_BLAST = 8
+    POWERUP_BLAST = 9
+    BOX_POWERUP_BOMBUP = 10
+    POWERUP_BOMBUP = 11
+    FALLING_WALL = 12
 
     def draw(self, canvas, x, y, lvl):
-        if self == Block.GOAL:
-            if len(lvl.enemies) == 0:
-                img = ASSETS['goal_open']
-            else:
-                img = ASSETS['goal_closed']
-        else:
-            assets_indexes = {
-                Block.GRASS: 'grass',
-                Block.WALL: 'wall',
-                Block.BOX: 'box',
-                Block.BOX_POWERUP_LIFE: 'box',
-                Block.BOX_POWERUP_BLAST: 'box',
-                Block.BOX_POWERUP_BOMBUP: 'box',
-                Block.BOX_GOAL: 'box',
-                Block.POWERUP_LIFE: 'powerup_life',
-                Block.POWERUP_BLAST: 'powerup_blast',
-                Block.POWERUP_BOMBUP: 'powerup_bombup',
-                Block.FALLING_WALL: 'falling_wall'
-            }
-            img = ASSETS[assets_indexes[self]]
+        assets_indexes = {
+            Block.GRASS: 'grass',
+            Block.WALL: 'wall',
+            Block.BOX: 'box',
+            Block.GOAL_OPEN: 'goal_open',
+            Block.GOAL_CLOSED: 'goal_closed',
+            Block.BOX_POWERUP_LIFE: 'box',
+            Block.BOX_POWERUP_BLAST: 'box',
+            Block.BOX_POWERUP_BOMBUP: 'box',
+            Block.BOX_GOAL: 'box',
+            Block.POWERUP_LIFE: 'powerup_life',
+            Block.POWERUP_BLAST: 'powerup_blast',
+            Block.POWERUP_BOMBUP: 'powerup_bombup',
+            Block.FALLING_WALL: 'falling_wall'
+        }
+        img = ASSETS[assets_indexes[self]]
         if self in [Block.POWERUP_LIFE, Block.POWERUP_BLAST, Block.POWERUP_BOMBUP]:
             canvas.draw(ASSETS['grass'], (x,y))
         canvas.draw(img, (x, y))
@@ -198,7 +198,7 @@ class Flame:
         block = lvl.matrix.explode_block(x, y)
         return block in [
           Block.BOX, Block.BOX_GOAL, Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_LIFE,
-          Block.WALL, Block.GOAL
+          Block.WALL,
         ]
     
     def collides(self, x, y):
@@ -300,6 +300,9 @@ class Enemy:
         self.alive = False
         self.game.score += self.score_worth
         self.time_to_disappear = 2.5
+        if len(lvl.enemies) == 1:
+            lvl.matrix.open_doors()
+       
     
     def check_has_to_change_direction_due_to_bomb(self, lvl):
         if self.direction == 'up':
@@ -350,7 +353,6 @@ class Enemy:
                     break
             available[i] = available[i] and not (
                 lvl.matrix.is_solid(*pos) 
-                or lvl.matrix.is_goal(*pos)
             )
         total = sum([w for w, a in zip(weights, available) if a])
         weights = [w/total if a else 0 for w, a in zip(weights, available)]
@@ -522,7 +524,7 @@ class Player:
                 return
         self.pos = new_pos
         lvl.matrix.check_obtains_powerups(self)
-        if lvl.matrix.check_enters_goal(*self.pos, lvl.enemies):
+        if lvl.matrix.check_enters_goal(*self.pos):
             # TODO enter goal animation
             if  self.game.start_next_level_timer == None and self.game.restart_level_timer == None:
                 self.game.start_next_level_timer = 2.5
@@ -540,6 +542,8 @@ class BlockMatrix:
         self.falling_direction = 'right'
         self.move_until = 9
         self.exploding = []
+        self.door_opening = None
+        self.goal_open = False
         if matrix is None:
             self.matrix = [
                 [1 for _ in range(13)],
@@ -565,10 +569,28 @@ class BlockMatrix:
             x, y = goal
             self.matrix[y][x] = Block.BOX_GOAL
 
+    def open_doors(self):
+        for y, row in enumerate(self.matrix):
+            for x, cell in enumerate(row):
+                if cell == Block.GOAL_CLOSED:
+                    self.door_opening = [(x, y), 0.5]
+                    self.matrix[y][x] = Block.GOAL_OPEN
+                    return
+
     def draw(self, time, canvas, lvl, fallen_state=0):
         for i, row in enumerate(self.matrix):
             for j, block in enumerate(row):
                 block.draw(canvas, j, i, lvl)
+        if self.door_opening != None:
+            self.door_opening[1] -= time
+            pos = self.door_opening[0]
+            timer = self.door_opening[1]
+            if timer <= 0:
+                self.door_opening = None
+            else:
+                current_frame = int(timer//0.1)
+                current_frame = ASSETS['goal_opening'][current_frame]
+                canvas.draw(current_frame, pos)
         if self.falling != None:
             canvas.draw(ASSETS['falling_wall'], self.falling)
         for i, (x, y, e_time) in enumerate(self.exploding):
@@ -591,7 +613,10 @@ class BlockMatrix:
             self.matrix[y][x] = Block.GRASS
         elif block == Block.BOX_GOAL:
             self.exploding.append((x, y, 0.375))
-            self.matrix[y][x] = Block.GOAL
+            if self.goal_open:
+                self.matrix[y][x] = Block.GOAL_OPEN
+            else:
+                self.matrix[y][x] = Block.GOAL_CLOSED
         elif block == Block.BOX_POWERUP_BOMBUP:
             self.exploding.append((x, y, 0.375))
             self.matrix[y][x] = Block.POWERUP_BOMBUP
@@ -703,7 +728,7 @@ class BlockMatrix:
         self.sudden_death_fallen_blocks = fallen, current
 
     def is_goal(self, x, y):
-        return self.matrix[y][x] == Block.GOAL
+        return self.matrix[y][x] == Block.GOAL_OPEN
 
     def check_obtains_powerups(self, player):
         x, y = player.pos
@@ -719,9 +744,9 @@ class BlockMatrix:
                 self.matrix[ry][rx] = Block.GRASS
                 player.game.lives += 1
 
-    def check_enters_goal(self, x, y, enemies=[]):
+    def check_enters_goal(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
-        return len(enemies) == 0 and (
+        return (
           self.is_goal(xl, yl) 
           or self.is_goal(xl, yh) 
           or self.is_goal(xh, yl) 
@@ -729,7 +754,7 @@ class BlockMatrix:
         )
 
     def check_bomb_placeable(self, x, y):
-        return self.matrix[y][x] in [Block.GRASS, Block.FALLING_WALL]
+        return self.matrix[y][x] in [Block.GRASS, Block.FALLING_WALL, Block.GOAL_CLOSED]
 
     def check_collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
@@ -793,7 +818,7 @@ class Level:
     NUMBER_OF_RANDOMIZABLE_TILES_MP = NUMBER_OF_TILES - 79
 
     @staticmethod
-    def generate_singleplayer(game, canvas, enemies_limits=[3, 5], boxes_limits=[15, 35], max_bombs=1, bomb_blast_radius=2):
+    def generate_singleplayer(game, canvas, enemies_limits=[1, 1], boxes_limits=[15, 35], max_bombs=1, bomb_blast_radius=2):
         enemies_n = random.randrange(enemies_limits[0], enemies_limits[1]+1)
         boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
         # Doesn't include grass in spawn area
@@ -836,7 +861,7 @@ class Level:
                           Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_LIFE
                         ])
                         matrix[y][x] = powerup
-
+        matrix[1][3] = Block.BOX_GOAL
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players, enemies)
 
