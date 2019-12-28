@@ -20,6 +20,9 @@ ASSETS = {
     'menu_pointer': pygame.image.load('assets/menu_pointer.png'),
     'grass': pygame.image.load('assets/grass.png'),
     'wall': pygame.image.load('assets/wall.png'),
+    'materializing_wall': [
+        pygame.image.load('assets/materializing_wall/materializing_wall_{}.png'.format(i)) for i in range(1, 8)
+    ],
     'box': pygame.image.load('assets/box.png'),
     'goal_closed': pygame.image.load('assets/goal_closed.png'),
     'goal_open': pygame.image.load('assets/goal_open.png'),
@@ -52,7 +55,6 @@ ASSETS = {
     'flame_end_up': pygame.image.load('assets/explosion_end_up.png'),
     'flame_end_down': pygame.image.load('assets/explosion_end_down.png'),
     'enemy': pygame.image.load('assets/enemy.png'),
-    'falling_wall': pygame.image.load('assets/falling.png'),
 }
 
 DEFAULT_SINGLEPLAYER_CONTROLS = {
@@ -108,7 +110,6 @@ class Block(Enum):
     POWERUP_BLAST = 9
     BOX_POWERUP_BOMBUP = 10
     POWERUP_BOMBUP = 11
-    FALLING_WALL = 12
 
     def draw(self, canvas, x, y, lvl):
         assets_indexes = {
@@ -124,7 +125,6 @@ class Block(Enum):
             Block.POWERUP_LIFE: 'powerup_life',
             Block.POWERUP_BLAST: 'powerup_blast',
             Block.POWERUP_BOMBUP: 'powerup_bombup',
-            Block.FALLING_WALL: 'falling_wall'
         }
         img = ASSETS[assets_indexes[self]]
         if self in [Block.POWERUP_LIFE, Block.POWERUP_BLAST, Block.POWERUP_BOMBUP]:
@@ -570,6 +570,7 @@ class BlockMatrix:
             self.matrix[y][x] = Block.BOX_GOAL
 
     def open_doors(self):
+        self.goal_open = True
         for y, row in enumerate(self.matrix):
             for x, cell in enumerate(row):
                 if cell == Block.GOAL_CLOSED:
@@ -592,7 +593,9 @@ class BlockMatrix:
                 current_frame = ASSETS['goal_opening'][current_frame]
                 canvas.draw(current_frame, pos)
         if self.falling != None:
-            canvas.draw(ASSETS['falling_wall'], self.falling)
+            timer = self.sudden_death_fallen_blocks[1]
+            current_frame = ASSETS['materializing_wall'][int(timer*7)]
+            canvas.delay_draw(current_frame, self.falling)
         for i, (x, y, e_time) in enumerate(self.exploding):
             e_time -= time 
             if e_time <= 0:
@@ -636,7 +639,6 @@ class BlockMatrix:
     
     def drop_wall(self, x, y):
         self.falling = [x, y]
-        #self.matrix[y][x] = Block.FALLING_WALL
     
     def drop_next_wall(self):
         if self.falling == None:
@@ -754,7 +756,7 @@ class BlockMatrix:
         )
 
     def check_bomb_placeable(self, x, y):
-        return self.matrix[y][x] in [Block.GRASS, Block.FALLING_WALL, Block.GOAL_CLOSED]
+        return self.matrix[y][x] in [Block.GRASS, Block.GOAL_CLOSED]
 
     def check_collides(self, x, y):
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
@@ -766,12 +768,22 @@ class LevelCanvas:
         self.screen = screen
         self.pos = pos
         self.scale = scale
+        self.delayed = []
     
     def draw(self, img, pos):
         x = pos[0]*self.scale + self.pos[0]
         y = pos[1]*self.scale + self.pos[1]
         self.screen.blit(img, (x, y))
 
+    def draw_delayed(self):
+        for img, pos in self.delayed:
+            self.draw(img, pos)
+        self.delayed = []
+
+    # Ensures the items drawn here will be the last being 
+    # drawn (so they appear in the front)
+    def delay_draw(self, img, pos):
+        self.delayed.append((img, pos))
 
 class Level:
     def __init__(self, canvas, matrix, players, enemies=[]):
@@ -797,6 +809,8 @@ class Level:
         for enemy in self.enemies:
             enemy.loop(self, time)
 
+        self.canvas.draw_delayed()
+
     def handle_key(self, key):
         for player in self.players:
             player.handle_key(key, self)
@@ -818,7 +832,7 @@ class Level:
     NUMBER_OF_RANDOMIZABLE_TILES_MP = NUMBER_OF_TILES - 79
 
     @staticmethod
-    def generate_singleplayer(game, canvas, enemies_limits=[1, 1], boxes_limits=[15, 35], max_bombs=1, bomb_blast_radius=2):
+    def generate_singleplayer(game, canvas, enemies_limits=[3, 4], boxes_limits=[15, 35], max_bombs=1, bomb_blast_radius=2):
         enemies_n = random.randrange(enemies_limits[0], enemies_limits[1]+1)
         boxes_n = random.randrange(boxes_limits[0], boxes_limits[1]+1)
         # Doesn't include grass in spawn area
@@ -861,7 +875,7 @@ class Level:
                           Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP, Block.BOX_POWERUP_LIFE
                         ])
                         matrix[y][x] = powerup
-        matrix[1][3] = Block.BOX_GOAL
+        
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players, enemies)
 
@@ -902,7 +916,7 @@ class Level:
                           Block.BOX_POWERUP_BLAST, Block.BOX_POWERUP_BOMBUP,
                         ])
                         matrix[y][x] = powerup
-
+        
         matrix = BlockMatrix(matrix)
         return Level(canvas, matrix, players)
 
