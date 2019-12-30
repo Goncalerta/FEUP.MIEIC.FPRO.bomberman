@@ -74,7 +74,27 @@ ASSETS = {
     'flame_down_end': [
       pygame.image.load('assets/explosion/explosion_down_end_{}.png'.format(i)) for i in range(1, 4)
     ],
-    'enemy': pygame.image.load('assets/enemy.png'),
+    'enemy': {
+      'up': [
+        pygame.image.load('assets/enemy/enemy_up_{}.png'.format(i)) for i in range(1, 5)
+      ],
+      'down': [
+        pygame.image.load('assets/enemy/enemy_down_{}.png'.format(i)) for i in range(1, 5)
+      ],
+      'left': [
+        pygame.image.load('assets/enemy/enemy_left_{}.png'.format(i)) for i in range(1, 5)
+      ],
+      'right': [
+        pygame.image.load('assets/enemy/enemy_right_{}.png'.format(i)) for i in range(1, 5)
+      ],
+      'idle': [
+        pygame.image.load('assets/enemy/enemy_idle_{}.png'.format(i)) for i in range(1, 5)
+      ],
+    },
+    'enemy_dead': [
+      pygame.image.load('assets/enemy/enemy_dead_{}.png'.format(i)) for i in range(1, 6)
+    ],
+    
 }
 
 DEFAULT_SINGLEPLAYER_CONTROLS = {
@@ -307,7 +327,7 @@ class VerticalFlame(Flame):
 
 class Enemy:
     # Enemy velocity in blocks per second
-    VELOCITY = 1.60
+    VELOCITY = 1.40
 
     def __init__(self, game, x, y, direction):
         self.game = game
@@ -316,8 +336,17 @@ class Enemy:
         self.alive = True
         self.score_worth = 50
         self.time_to_disappear = None
+        self.clock = 0
+
+        self.eyes_closed = False
+        self.blink_tick = 0
+        self.seconds_since_eyes_closed = 0
 
     def loop(self, lvl, time):
+        self.clock += time
+        self.blink_tick += time
+        self.seconds_since_eyes_closed += time
+        self.loop_eyes()
         self.draw(lvl.canvas)
         if self.alive:
             self.check_has_to_change_direction_due_to_bomb(lvl)
@@ -333,7 +362,7 @@ class Enemy:
     def die(self, lvl):
         self.alive = False
         self.game.score += self.score_worth
-        self.time_to_disappear = 2.5
+        self.time_to_disappear = 1
         if len(lvl.enemies) == 1:
             lvl.matrix.open_doors()
        
@@ -441,8 +470,25 @@ class Enemy:
         xl, xh, yl, yh = list_colliding_coordinates(x, y)
         return xl <= self.pos[0] <= xh and yl <= self.pos[1] <= yh
 
+    def loop_eyes(self): 
+        if self.seconds_since_eyes_closed >= 0.2:
+            self.eyes_closed = False
+        if self.blink_tick >= 0.1:
+            self.blink_tick -= 0.1
+            if self.seconds_since_eyes_closed >= 0.4:
+                if random.random() <= 1.5**(4*self.seconds_since_eyes_closed)/100:
+                    self.eyes_closed = True
+                    self.seconds_since_eyes_closed = 0
+
     def draw(self, canvas):
-        canvas.draw(ASSETS['enemy'], self.pos)
+        if self.alive:
+            current_frame = int((self.clock%0.4)//0.2)
+            if self.eyes_closed:
+                current_frame += 2
+            canvas.draw(ASSETS['enemy'][self.direction][current_frame], self.pos)
+        else:
+            current_frame = int((1-self.time_to_disappear)//0.2)
+            canvas.draw(ASSETS['enemy_dead'][current_frame], self.pos)
 
 class Player:
     # Player velocity in blocks per second
