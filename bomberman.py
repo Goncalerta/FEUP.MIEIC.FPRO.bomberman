@@ -47,13 +47,33 @@ ASSETS = {
     'exploding_box': [
       pygame.image.load('assets/exploding_box/exploding_box_{}.png'.format(i)) for i in range(1, 7)
     ],
-    'flame_center': pygame.image.load('assets/explosion_center.png'),
-    'flame_horizontal': pygame.image.load('assets/explosion_horizontal.png'),
-    'flame_vertical': pygame.image.load('assets/explosion_vertical.png'),
-    'flame_end_left': pygame.image.load('assets/explosion_end_left.png'),
-    'flame_end_right': pygame.image.load('assets/explosion_end_right.png'),
-    'flame_end_up': pygame.image.load('assets/explosion_end_up.png'),
-    'flame_end_down': pygame.image.load('assets/explosion_end_down.png'),
+    'flame_center': [
+      pygame.image.load('assets/explosion/explosion_center_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_right': [
+      pygame.image.load('assets/explosion/explosion_right_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_left': [
+      pygame.image.load('assets/explosion/explosion_left_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_up': [
+      pygame.image.load('assets/explosion/explosion_up_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_down': [
+      pygame.image.load('assets/explosion/explosion_down_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_right_end': [
+      pygame.image.load('assets/explosion/explosion_right_end_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_left_end': [
+      pygame.image.load('assets/explosion/explosion_left_end_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_up_end': [
+      pygame.image.load('assets/explosion/explosion_up_end_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'flame_down_end': [
+      pygame.image.load('assets/explosion/explosion_down_end_{}.png'.format(i)) for i in range(1, 4)
+    ],
     'enemy': pygame.image.load('assets/enemy.png'),
 }
 
@@ -202,7 +222,7 @@ class Flame:
         ]
     
     def collides(self, x, y):
-        return self.pos[0] - 0.5 <= x <= self.pos[0] + 0.5 and self.pos[1] - 0.5 <= y <= self.pos[1] + 0.5
+        return self.pos[0] - 0.6 <= x <= self.pos[0] + 0.6 and self.pos[1] - 0.6 <= y <= self.pos[1] + 0.6
     
     # Abstract method to be defined in children classes
     def draw(self, canvas):
@@ -222,7 +242,12 @@ class CenterFlame(Flame):
             flames_list += [f for f in new_flames if f.should_spawn]
 
     def draw(self, canvas):
-        canvas.draw(ASSETS['flame_center'], self.pos)
+        current_frame = self.timer//0.1
+        if current_frame > 2:
+            current_frame = 4-current_frame
+        current_frame = int(current_frame)
+        canvas.draw(ASSETS['flame_center'][current_frame], self.pos)
+
 
 class HorizontalFlame(Flame):
     def __init__(self, lvl, x, y, flames_list, radius, timer, left_to_right):
@@ -240,12 +265,17 @@ class HorizontalFlame(Flame):
                 flames_list.append(flame)
 
     def draw(self, canvas):
-        if self.radius == 1 and self.left_to_right:
-            canvas.draw(ASSETS['flame_end_right'], self.pos)
-        elif self.radius == 1 and not self.left_to_right:
-            canvas.draw(ASSETS['flame_end_left'], self.pos)
+        if self.radius == 1:
+            flame = 'flame_right_end' if self.left_to_right else 'flame_left_end'
         else:
-            canvas.draw(ASSETS['flame_horizontal'], self.pos)
+            flame = 'flame_right' if self.left_to_right else 'flame_left'
+
+        current_frame = self.timer//0.1
+        if current_frame > 2:
+            current_frame = 4-current_frame
+        current_frame = int(current_frame)
+        canvas.draw(ASSETS[flame][current_frame], self.pos)
+
 
 class VerticalFlame(Flame):
     def __init__(self, lvl, x, y, flames_list, radius, timer, up_to_down):
@@ -263,12 +293,16 @@ class VerticalFlame(Flame):
                 flames_list.append(flame)
 
     def draw(self, canvas):
-        if self.radius == 1 and self.up_to_down:
-            canvas.draw(ASSETS['flame_end_down'], self.pos)
-        elif self.radius == 1 and not self.up_to_down:
-            canvas.draw(ASSETS['flame_end_up'], self.pos)
+        if self.radius == 1:
+            flame = 'flame_down_end' if self.up_to_down else 'flame_up_end'
         else:
-            canvas.draw(ASSETS['flame_vertical'], self.pos)
+            flame = 'flame_down' if self.up_to_down else 'flame_up'
+
+        current_frame = self.timer//0.1
+        if current_frame > 2:
+            current_frame = 4-current_frame
+        current_frame = int(current_frame)
+        canvas.draw(ASSETS[flame][current_frame], self.pos)
 
 
 class Enemy:
