@@ -5,14 +5,17 @@
 
 #### Objetivo
 
-Criar um clone do [Bomberman](https://www.retrogames.cz/play_085-NES.php) (NES) em Pygame
+Criar um remake do [Bomberman](https://www.retrogames.cz/play_085-NES.php) (NES) em Pygame
 
 #### Descrição
 
 É um jogo de estratégia onde o objetivo é destruir todos os inimigos presentes num labirinto.
 O jogador pode movimentar-se ao longo desse labirinto e largar bombas, que explodem nas quatro
-direções: cima, baixo, esquerda e direita. Estas bombas podem destruir determinados tipos de paredes
-e podem matar o próprio jogador, se ele estiver na zona de explosão.
+direções: cima, baixo, esquerda e direita. Além de matar os inimigos, estas bombas podem 
+destruir paredes de tijolos e matar o próprio jogador, se ele estiver na zona de explosão.
+
+O jogo também pode ser jogado em multijogador, onde dois jogadores se tentam eliminar um ao
+outro.
 
 #### UI
 

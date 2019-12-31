@@ -492,7 +492,7 @@ class Enemy:
 
 class Player:
     # Player velocity in blocks per second
-    VELOCITY = 1.75
+    VELOCITY = 1.50
 
     def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=1, bomb_blast_radius=2):
         self.pos = [x, y]
