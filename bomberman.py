@@ -105,7 +105,7 @@ DEFAULT_SINGLEPLAYER_CONTROLS = {
     'place_bomb': pygame.K_SPACE,
 }
 
-DEFAULT_P1CONTROLS = {
+DEFAULT_P2CONTROLS = {
     'up': pygame.K_UP,
     'down': pygame.K_DOWN,
     'left': pygame.K_LEFT,
@@ -113,7 +113,7 @@ DEFAULT_P1CONTROLS = {
     'place_bomb': pygame.K_PERIOD,
 }
 
-DEFAULT_P2CONTROLS = {
+DEFAULT_P1CONTROLS = {
     'up': pygame.K_w,
     'down': pygame.K_s,
     'left': pygame.K_a,
