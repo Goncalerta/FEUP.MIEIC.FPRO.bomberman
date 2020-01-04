@@ -32,14 +32,20 @@ ASSETS = {
     ],
     'powerup_blast': pygame.image.load('assets/powerup_blast.png'),
     'powerup_bombup': pygame.image.load('assets/powerup_bombup.png'),
-    'player1_up': pygame.image.load('assets/player1_up.png'),
-    'player1_down': pygame.image.load('assets/player1_down.png'),
-    'player1_left': pygame.image.load('assets/player1_left.png'),
-    'player1_right': pygame.image.load('assets/player1_right.png'),
-    'player2_up': pygame.image.load('assets/player2_up.png'),
-    'player2_down': pygame.image.load('assets/player2_down.png'),
-    'player2_left': pygame.image.load('assets/player2_left.png'),
-    'player2_right': pygame.image.load('assets/player2_right.png'),
+    'player1_up': pygame.image.load('assets/player/player1_up.png'),
+    'player1_down': pygame.image.load('assets/player/player1_down.png'),
+    'player1_left': pygame.image.load('assets/player/player1_left.png'),
+    'player1_right': pygame.image.load('assets/player/player1_right.png'),
+    'player1_die': [
+      pygame.image.load('assets/player/player1_die_{}.png'.format(i)) for i in range(1, 4)
+    ],
+    'player2_up': pygame.image.load('assets/player/player2_up.png'),
+    'player2_down': pygame.image.load('assets/player/player2_down.png'),
+    'player2_left': pygame.image.load('assets/player/player2_left.png'),
+    'player2_right': pygame.image.load('assets/player/player2_right.png'),
+    'player2_die': [
+      pygame.image.load('assets/player/player2_die_{}.png'.format(i)) for i in range(1, 4)
+    ],
     'bomb': [
       pygame.image.load('assets/bomb/bomb_{}.png'.format(i)) for i in range(1, 11)
     ],
@@ -467,8 +473,7 @@ class Enemy:
                 self.pos[0] += distance
 
     def collides(self, x, y):
-        xl, xh, yl, yh = list_colliding_coordinates(x, y)
-        return xl <= self.pos[0] <= xh and yl <= self.pos[1] <= yh
+        return -0.6 <= x - self.pos[0] <= 0.6 and -0.6 <= y - self.pos[1] <= 0.6
 
     def loop_eyes(self): 
         if self.seconds_since_eyes_closed >= 0.2:
@@ -502,42 +507,64 @@ class Player:
         self.max_bombs = max_bombs
         self.game = game
         self.alive = True
+        self.time_since_dead = None
         self.bomb_blast_radius = bomb_blast_radius
 
     def loop(self, lvl, time):
         self.draw(lvl.canvas)
         if self.alive:
-            self.check_key_move(lvl, time)
             for f in lvl.flames:
                 if f.collides(*self.pos):
                     self.die()
             for e in lvl.enemies:
                 if e.alive and e.collides(*self.pos):
                     self.die()
+            self.check_key_move(lvl, time)
+        else:
+            self.time_since_dead += time
                 
     def die(self):
         self.alive = False
+        self.time_since_dead = 0
         self.game.player_died(self)
         
     def draw(self, canvas):
         if self.sprite == 'p1':
-            if self.direction == 'up':
-                img = ASSETS['player1_up']
-            elif self.direction == 'down':
-                img = ASSETS['player1_down']
-            elif self.direction == 'left':
-                img = ASSETS['player1_left']
-            elif self.direction == 'right':
-                img = ASSETS['player1_right']
+            if self.alive:
+                if self.direction == 'up':
+                    img = ASSETS['player1_up']
+                elif self.direction == 'down':
+                    img = ASSETS['player1_down']
+                elif self.direction == 'left':
+                    img = ASSETS['player1_left']
+                elif self.direction == 'right':
+                    img = ASSETS['player1_right']
+            else:
+                current_frame = int((self.time_since_dead)//0.2)
+                if current_frame == 0:
+                    img = ASSETS['player1_down']
+                elif current_frame >= 4:
+                    return
+                else:
+                    img = ASSETS['player1_die'][current_frame-1]
         elif self.sprite == 'p2':
-            if self.direction == 'up':
-                img = ASSETS['player2_up']
-            elif self.direction == 'down':
-                img = ASSETS['player2_down']
-            elif self.direction == 'left':
-                img = ASSETS['player2_left']
-            elif self.direction == 'right':
-                img = ASSETS['player2_right']
+            if self.alive:
+                if self.direction == 'up':
+                    img = ASSETS['player2_up']
+                elif self.direction == 'down':
+                    img = ASSETS['player2_down']
+                elif self.direction == 'left':
+                    img = ASSETS['player2_left']
+                elif self.direction == 'right':
+                    img = ASSETS['player2_right']
+            else:
+                current_frame = int((self.time_since_dead)//0.2)
+                if current_frame == 0:
+                    img = ASSETS['player2_down']
+                elif current_frame >= 4:
+                    return
+                else:
+                    img = ASSETS['player2_die'][current_frame-1]
 
         canvas.draw(img, self.pos)
 
@@ -605,9 +632,8 @@ class Player:
         self.pos = new_pos
         lvl.matrix.check_obtains_powerups(self)
         if lvl.matrix.check_enters_goal(*self.pos):
-            # TODO enter goal animation
             if  self.game.start_next_level_timer == None and self.game.restart_level_timer == None:
-                self.game.start_next_level_timer = 2.5
+                self.game.start_next_level_timer = 0.25
 
     def handle_key(self, key, lvl):
         if key == self.controls['place_bomb']:
@@ -827,13 +853,8 @@ class BlockMatrix:
                 player.game.lives += 1
 
     def check_enters_goal(self, x, y):
-        xl, xh, yl, yh = list_colliding_coordinates(x, y)
-        return (
-          self.is_goal(xl, yl) 
-          or self.is_goal(xl, yh) 
-          or self.is_goal(xh, yl) 
-          or self.is_goal(xh, yh)
-        )
+        x, y = round(x), round(y)
+        return self.is_goal(x, y) 
 
     def check_bomb_placeable(self, x, y):
         return self.matrix[y][x] in [Block.GRASS, Block.GOAL_CLOSED]
