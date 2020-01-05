@@ -333,7 +333,7 @@ class VerticalFlame(Flame):
 
 class Enemy:
     # Enemy velocity in blocks per second
-    VELOCITY = 1.40
+    VELOCITY = 1.60
 
     def __init__(self, game, x, y, direction):
         self.game = game
@@ -497,7 +497,7 @@ class Enemy:
 
 class Player:
     # Player velocity in blocks per second
-    VELOCITY = 1.50
+    VELOCITY = 1.75
 
     def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=1, bomb_blast_radius=2):
         self.pos = [x, y]
@@ -1064,9 +1064,24 @@ class ClassicGame(Game):
         self.time = self.initial_time
 
         canvas = LevelCanvas(self.screen, (0, 130))
+        e, b = self.calculate_difficulty()
         self.level = Level.generate_singleplayer(self, canvas, 
-          max_bombs=self.max_bombs, bomb_blast_radius=self.bomb_blast_radius
+          max_bombs=self.max_bombs, bomb_blast_radius=self.bomb_blast_radius,
+          enemies_limits=e, boxes_limits=b
         )
+
+    def calculate_difficulty(self):
+        if self.stage == 1:
+            return [2, 3], [15, 20]
+        if self.stage == 2:
+            return [3, 4], [15, 30]
+        if self.stage == 3:
+            return [3, 5], [23, 35]
+        if self.stage <= 5:
+            return [4, 5], [30, 40]
+        if self.stage <= 10:
+            return [5, 7], [35, 45]
+        return [5, 10], [40, 60]
 
     def trigger_level_failed(self):
         self.lives -= 1
