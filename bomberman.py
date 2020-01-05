@@ -187,7 +187,6 @@ class Bomb:
         self.chaining = False
     
     def loop(self, lvl, time):
-        self.draw(lvl.canvas)
         self.timer -= time
         if self.timer <= 0:
             self.detonate(lvl)
@@ -232,8 +231,6 @@ class Flame:
         self.timer -= time
         if self.timer <= 0:
             lvl.flames.remove(self)
-        else:
-            self.draw(lvl.canvas)
 
     def affects_environment(self, lvl):
         x = self.pos[0]
@@ -353,7 +350,6 @@ class Enemy:
         self.blink_tick += time
         self.seconds_since_eyes_closed += time
         self.loop_eyes()
-        self.draw(lvl.canvas)
         if self.alive:
             self.check_has_to_change_direction_due_to_bomb(lvl)
             self.move(lvl, self.VELOCITY*time)
@@ -511,7 +507,6 @@ class Player:
         self.bomb_blast_radius = bomb_blast_radius
 
     def loop(self, lvl, time):
-        self.draw(lvl.canvas)
         if self.alive:
             for f in lvl.flames:
                 if f.collides(*self.pos):
@@ -684,33 +679,38 @@ class BlockMatrix:
                     self.matrix[y][x] = Block.GOAL_OPEN
                     return
 
-    def draw(self, time, canvas, lvl, fallen_state=0):
+    def draw(self, canvas, lvl):
         for i, row in enumerate(self.matrix):
             for j, block in enumerate(row):
                 block.draw(canvas, j, i, lvl)
+
+        if self.door_opening != None:
+            pos, timer = self.door_opening
+            current_frame = int(timer//0.1)
+            current_frame = ASSETS['goal_opening'][current_frame]
+            canvas.draw(current_frame, pos)
+        if self.falling != None:
+            timer = self.sudden_death_fallen_blocks[1]
+            current_frame = ASSETS['materializing_wall'][int(timer*7)]
+            canvas.delay_draw(current_frame, self.falling)
+        for x, y, e_time in self.exploding:
+            current_frame = int((0.375-e_time)//0.0625)
+            current_frame = ASSETS['exploding_box'][current_frame]
+            canvas.draw(current_frame, (x, y))
+
+    def loop(self, time):
         if self.door_opening != None:
             self.door_opening[1] -= time
             pos = self.door_opening[0]
             timer = self.door_opening[1]
             if timer <= 0:
                 self.door_opening = None
-            else:
-                current_frame = int(timer//0.1)
-                current_frame = ASSETS['goal_opening'][current_frame]
-                canvas.draw(current_frame, pos)
-        if self.falling != None:
-            timer = self.sudden_death_fallen_blocks[1]
-            current_frame = ASSETS['materializing_wall'][int(timer*7)]
-            canvas.delay_draw(current_frame, self.falling)
         for i, (x, y, e_time) in enumerate(self.exploding):
             e_time -= time 
             if e_time <= 0:
                 del self.exploding[i]
                 continue
             self.exploding[i] = (x, y, e_time)
-            current_frame = int((0.375-e_time)//0.0625)
-            current_frame = ASSETS['exploding_box'][current_frame]
-            canvas.draw(current_frame, (x, y))
 
     def explode_block(self, x, y):
         block = self.matrix[y][x]
@@ -895,8 +895,21 @@ class Level:
         self.flames = []
         self.enemies = enemies
 
+    def draw(self):
+        self.matrix.draw(self.canvas, self)
+        for flame in self.flames:
+            flame.draw(self.canvas)
+        for bomb in self.bombs.values():
+            bomb.draw(self.canvas)
+        for player in self.players:
+            player.draw(self.canvas)    
+        for enemy in self.enemies:
+            enemy.draw(self.canvas)
+
+        self.canvas.draw_delayed()
+
     def loop(self, time):
-        self.matrix.draw(time, self.canvas, self)
+        self.matrix.loop(time)
         for flame in self.flames:
             flame.loop(self, time)
         for bomb in self.bombs.values():
@@ -909,8 +922,6 @@ class Level:
             player.loop(self, time)    
         for enemy in self.enemies:
             enemy.loop(self, time)
-
-        self.canvas.draw_delayed()
 
     def handle_key(self, key):
         for player in self.players:
@@ -1036,10 +1047,18 @@ class Game:
         pass
 
     def loop(self, time):
-        self.draw_gamebar(time)
+        self.time -= time
+        self.update_gamebar(time)
         self.level.loop(time)
+
+    def draw(self):
+        self.draw_gamebar()
+        self.level.draw()
         
-    def draw_gamebar(self, time):
+    def draw_gamebar(self):
+        pass
+
+    def update_gamebar(self, time):
         pass
 
     def handle_key(self, key):
@@ -1084,9 +1103,8 @@ class ClassicGame(Game):
         return [5, 10], [40, 60]
 
     def trigger_level_failed(self):
-        self.lives -= 1
-
-        if self.lives >= 0:
+        if self.lives > 0:
+            self.lives -= 1
             self.initialize_level()
         else:
             self.context.menu.open('gameover', score=self.score, stage=self.stage)
@@ -1107,13 +1125,9 @@ class ClassicGame(Game):
             if self.start_next_level_timer <= 0:
                 self.trigger_level_complete()
         super().loop(time)
-        
-    def draw_gamebar(self, time):
-        if self.restart_level_timer == None and self.start_next_level_timer == None:
-            self.time -= time
+    
+    def draw_gamebar(self):
         if self.time <= 0: 
-            if self.restart_level_timer == None and self.start_next_level_timer == None:
-                self.restart_level_timer = 2.5
             timer = 'TIME\'S UP'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
@@ -1133,6 +1147,11 @@ class ClassicGame(Game):
         self.screen.blit(timer, lives.get_rect(right=610, centery=35))
         self.screen.blit(score, score.get_rect(left=30, centery=95))
         self.screen.blit(lives, lives.get_rect(right=610, centery=95))
+
+    def update_gamebar(self, time):
+        if self.time <= 0: 
+            if self.restart_level_timer == None and self.start_next_level_timer == None:
+                self.restart_level_timer = 2.5
 
     def player_died(self, player):
         if self.restart_level_timer == None and self.start_next_level_timer == None:
@@ -1176,11 +1195,13 @@ class DuelGame(Game):
             if self.end_level_timer <= 0:
                 self.trigger_level_over()
         super().loop(time)
-        
-    def draw_gamebar(self, time):
-        self.time -= time
+
+    def update_gamebar(self, time):
         if self.time <= 0: 
             self.sudden_death = True
+
+    def draw_gamebar(self):
+        if self.sudden_death: 
             timer = 'SUDDEN DEATH'
             timer = GAME_FONT.render(timer, True, (200, 0, 0))
         else:
@@ -1355,6 +1376,7 @@ class Context:
             else:
                 self.screen.fill((140, 140, 140))
                 self.game.loop(self.clock.get_time()/1000)
+                self.game.draw()
             
             pygame.display.flip()
 
