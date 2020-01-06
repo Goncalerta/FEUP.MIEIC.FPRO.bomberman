@@ -54,6 +54,6 @@ outro.
    1. ~~movimentar na direcção respectiva~~
    1. ~~colisão entre jogador/inimigo e chama/inimigo~~
 1. ~~**DOIS JOGADORES**~~
-1. **ANIMAÇÕES**
+1. ~~**ANIMAÇÕES**~~
 
 18 November 2019
