@@ -1160,6 +1160,7 @@ class ClassicGame(Game):
 class DuelGame(Game):
     def __init__(self, context, screen, initial_time=90):
         self.loser = None
+        self.no_winner = False
         self.end_level_timer = None
         self.sudden_death = False
         self.p1_wins = 0
@@ -1173,7 +1174,9 @@ class DuelGame(Game):
         self.level = Level.generate_multiplayer(self, canvas)
 
     def trigger_level_over(self):
-        if self.loser != self.level.players[0]:
+        if self.no_winner:
+            self.context.menu.open('mp_gameover_draw')
+        elif self.loser != self.level.players[0]:
             self.p1_wins += 1
             self.context.menu.open('mp_gameover_winsp1')
         elif self.loser != self.level.players[1]:
@@ -1217,8 +1220,11 @@ class DuelGame(Game):
         self.screen.blit(p2_wins, p2_wins.get_rect(left=30, centery=95))        
 
     def player_died(self, player):
-        if self.end_level_timer == None:
+        if self.loser == None:
             self.loser = player
+        elif self.loser != player and self.end_level_timer >= 2.3:
+            self.no_winner = True
+        if self.end_level_timer == None:
             self.end_level_timer = 2.5
 
 
@@ -1268,6 +1274,10 @@ class Menu:
             MenuOption(screen, 'Play Again', self.context.play_again), 
             MenuOption(screen, 'Main menu', lambda: self.open('main'))
           ],
+          'mp_gameover_draw': [
+            MenuOption(screen, 'Play Again', self.context.play_again), 
+            MenuOption(screen, 'Main menu', lambda: self.open('main'))
+          ],
         }
 
     def open(self, mode, score=None, stage=None):
@@ -1297,6 +1307,9 @@ class Menu:
             self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
         elif self.mode == 'mp_gameover_winsp2':
             gameover_label = GAME_FONT.render('Player two wins!', True, (255, 30, 0))
+            self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
+        elif self.mode == 'mp_gameover_draw':
+            gameover_label = GAME_FONT.render('Draw.', True, (255, 219, 18))
             self.screen.blit(gameover_label, gameover_label.get_rect(left=80, top=300))
             
         y = 500
