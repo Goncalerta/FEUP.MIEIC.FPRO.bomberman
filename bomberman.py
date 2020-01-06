@@ -142,7 +142,6 @@ def list_colliding_coordinates(x, y):
 def calculate_distance(p1, p2):
     return ((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)**0.5
 
-
 class Block(Enum):
     GRASS = 0
     WALL = 1
@@ -1251,7 +1250,7 @@ class Menu:
           'main': [
             MenuOption(screen, 'Classic Mode', self.context.new_classic_game), 
             MenuOption(screen, '2P Duel Mode', self.context.new_duel_game),
-            MenuOption(screen, 'Quit Game', sys.exit),
+            MenuOption(screen, 'Quit Game', self.context.quit),
           ],
           'pause': [
             MenuOption(screen, 'Continue', self.context.resume_game), 
@@ -1326,6 +1325,7 @@ class Context:
     def __init__(self):
         self.size = 650, 780
         self.speed = [2, 2]
+        self.running = True
         pygame.display.set_caption('Bomberman')
         pygame.display.set_icon(ASSETS['icon'])
         self.screen = pygame.display.set_mode(self.size)
@@ -1356,12 +1356,15 @@ class Context:
         self.menu.is_open = False
         self.game.play_again()
 
+    def quit(self):
+        self.running = False
+
     def loop(self):
-        while True:
+        while self.running:
             self.clock.tick(30)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    sys.exit()
+                    self.quit()
                 if event.type == pygame.KEYDOWN:
                     if self.menu.is_open:
                         self.menu.handle_key(event.key)
@@ -1379,5 +1382,8 @@ class Context:
                 self.game.draw()
             
             pygame.display.flip()
+        pygame.display.quit()
+        pygame.quit()
+        sys.exit()
 
 Context().loop()
