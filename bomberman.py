@@ -6,6 +6,7 @@ Created on Thu Nov 21 18:06:36 2019
 @author: up201905348
 """
 
+
 from enum import Enum
 import sys
 import pygame
@@ -103,6 +104,7 @@ ASSETS = {
     
 }
 
+
 DEFAULT_SINGLEPLAYER_CONTROLS = {
     'up': pygame.K_UP,
     'down': pygame.K_DOWN,
@@ -110,6 +112,7 @@ DEFAULT_SINGLEPLAYER_CONTROLS = {
     'right': pygame.K_RIGHT,
     'place_bomb': pygame.K_SPACE,
 }
+
 
 DEFAULT_P2CONTROLS = {
     'up': pygame.K_UP,
@@ -119,6 +122,7 @@ DEFAULT_P2CONTROLS = {
     'place_bomb': pygame.K_PERIOD,
 }
 
+
 DEFAULT_P1CONTROLS = {
     'up': pygame.K_w,
     'down': pygame.K_s,
@@ -127,10 +131,12 @@ DEFAULT_P1CONTROLS = {
     'place_bomb': pygame.K_q,
 }
 
+
 PAUSE_KEY = pygame.K_ESCAPE
 SELECT_KEY = pygame.K_RETURN
 UP_KEY = pygame.K_UP 
 DOWN_KEY = pygame.K_DOWN
+
 
 GAME_FONT = pygame.font.Font('assets/font/PixelMiners-KKal.otf', 32) 
 
@@ -141,6 +147,7 @@ def list_colliding_coordinates(x, y):
 
 def calculate_distance(p1, p2):
     return ((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)**0.5
+
 
 class Block(Enum):
     GRASS = 0
@@ -490,6 +497,7 @@ class Enemy:
             current_frame = int((1-self.time_to_disappear)//0.2)
             canvas.draw(ASSETS['enemy_dead'][current_frame], self.pos)
 
+
 class Player:
     # Player velocity in blocks per second
     VELOCITY = 1.75
@@ -630,9 +638,10 @@ class Player:
                 self.game.start_next_level_timer = 0.25
 
     def handle_key(self, key, lvl):
-        if key == self.controls['place_bomb']:
-            if lvl.placed_bombs(self) < self.max_bombs:
-                lvl.try_place_bomb(*self.pos, self)
+        if self.alive:
+            if key == self.controls['place_bomb']:
+                if lvl.placed_bombs(self) < self.max_bombs:
+                    lvl.try_place_bomb(*self.pos, self)
 
 
 class BlockMatrix:
@@ -700,9 +709,7 @@ class BlockMatrix:
     def loop(self, time):
         if self.door_opening != None:
             self.door_opening[1] -= time
-            pos = self.door_opening[0]
-            timer = self.door_opening[1]
-            if timer <= 0:
+            if self.door_opening[1] <= 0:
                 self.door_opening = None
         for i, (x, y, e_time) in enumerate(self.exploding):
             e_time -= time 
@@ -804,7 +811,6 @@ class BlockMatrix:
                             return
                     self.falling_direction = 'right'
 
-
     def sudden_death_loop(self, game, time):
         fallen, current = self.sudden_death_fallen_blocks
         current += time
@@ -884,6 +890,7 @@ class LevelCanvas:
     # drawn (so they appear in the front)
     def delay_draw(self, img, pos):
         self.delayed.append((img, pos))
+
 
 class Level:
     def __init__(self, canvas, matrix, players, enemies=[]):
@@ -1041,7 +1048,8 @@ class Game:
         self.time = None
         self.level = None 
         self.initialize_level()
-        
+    
+    # Abstract method to be defined in children classes
     def initialize_level(self):
         pass
 
@@ -1053,10 +1061,12 @@ class Game:
     def draw(self):
         self.draw_gamebar()
         self.level.draw()
-        
+    
+    # Abstract method to be defined in children classes
     def draw_gamebar(self):
         pass
 
+    # Abstract method to be defined in children classes
     def update_gamebar(self, time):
         pass
 
@@ -1333,7 +1343,7 @@ class Menu:
             else:
                 self.selected += 1
 
-    
+
 class Context:
     def __init__(self):
         self.size = 650, 780
