@@ -9,15 +9,18 @@ Criar um remake do [Bomberman](https://www.retrogames.cz/play_085-NES.php) (NES)
 
 #### Descrição
 
-É um jogo de estratégia onde o objetivo é destruir todos os inimigos presentes num labirinto.
-O jogador pode movimentar-se ao longo desse labirinto e largar bombas, que explodem nas quatro
-direções: cima, baixo, esquerda e direita. Além de matar os inimigos, estas bombas podem 
-destruir paredes de tijolos e matar o próprio jogador, se ele estiver na zona de explosão.
+É um jogo onde o objetivo é destruir todos os inimigos presentes num labirinto e encontrar a 
+saída. O jogador pode movimentar-se ao longo desse labirinto e colocar bombas. Estas explodem 
+ao fim de algum tempo em todas as direções: cima, baixo, esquerda e direita. Além de matar os 
+inimigos, estas bombas podem destruir paredes de tijolos e matar o próprio jogador, se ele 
+estiver na zona de explosão. Ao longo dos níveis, o jogador pode obter vidas extra ou powerups
+que potenciam as suas bombas de modo a tornar mais fácil destruir os inimigos (em contrapartida,
+bombas mais fortes podem ser um maior perigo para o próprio jogador).
 
 O jogo também pode ser jogado em multijogador, onde dois jogadores se tentam eliminar um ao
 outro.
 
-#### UI
+#### UI (jogo original na NES)
 
 ![](ui.gif)
 
