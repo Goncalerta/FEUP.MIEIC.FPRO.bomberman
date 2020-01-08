@@ -512,6 +512,7 @@ class Player:
         self.alive = True
         self.time_since_dead = None
         self.bomb_blast_radius = bomb_blast_radius
+        self.trying_to_place_bomb_timer = 0
 
     def loop(self, lvl, time):
         if self.alive:
@@ -522,6 +523,10 @@ class Player:
                 if e.alive and e.collides(*self.pos):
                     self.die()
             self.check_key_move(lvl, time)
+            
+            self.trying_to_place_bomb_timer -= time
+            if self.trying_to_place_bomb_timer > 0:
+                lvl.try_place_bomb(*self.pos, self)
         else:
             self.time_since_dead += time
                 
@@ -641,7 +646,10 @@ class Player:
         if self.alive:
             if key == self.controls['place_bomb']:
                 if lvl.placed_bombs(self) < self.max_bombs:
-                    lvl.try_place_bomb(*self.pos, self)
+                    if lvl.try_place_bomb(*self.pos, self):
+                        self.trying_to_place_bomb_timer = 0
+                    else:
+                        self.trying_to_place_bomb_timer = 0.2
 
 
 class BlockMatrix:
@@ -935,8 +943,17 @@ class Level:
 
     def try_place_bomb(self, x, y, placer):
         pos = round(x), round(y)
-        if pos not in self.bombs and self.matrix.check_bomb_placeable(*pos):
+        may_place = (
+          pos not in self.bombs 
+          and self.matrix.check_bomb_placeable(*pos)
+          and not (0.45 < x - int(x) < 0.55)
+          and not (0.45 < y - int(y) < 0.55)
+        )
+        print(x, int(x), x - int(x))
+        print(y, int(y), y - int(y))
+        if may_place:
             self.bombs[pos] = Bomb(*pos, placer, placer.bomb_blast_radius)
+        return may_place
 
     def placed_bombs(self, player):
         count = 0
