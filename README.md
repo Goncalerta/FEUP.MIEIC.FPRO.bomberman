@@ -5,7 +5,7 @@
 
 #### Objetivo
 
-Criar um remake do [Bomberman](https://www.retrogames.cz/play_085-NES.php) (NES) em Pygame
+Criar um remake do [Bomberman](https://www.retrogames.cz/play_085-NES.php) (NES) em Pygame.
 
 #### Descrição
 
@@ -19,6 +19,26 @@ bombas mais fortes podem ser um maior perigo para o próprio jogador).
 
 O jogo também pode ser jogado em multijogador, onde dois jogadores se tentam eliminar um ao
 outro.
+
+##### Controlos
+
+Singleplayer:
+- **Setas**: movimento
+- **Barra de espaço**: colocar bomba
+
+Multiplayer (jogador azul):
+- **WASD**: movimento
+- '**Q**': colocar bomba
+
+Multiplayer (jogador vermelho):
+- **Setas**: movimento
+- '**.**': colocar bomba
+
+##### Powerups
+
+- **Coração**: dá uma vida extra ao jogador
+- **Chama**: aumenta o raio de explosão da bomba
+- **Bomba**: aumenta o número máximo de bombas que o jogador pode colocar no mapa simultaneamente.
 
 #### UI (jogo original na NES)
 
