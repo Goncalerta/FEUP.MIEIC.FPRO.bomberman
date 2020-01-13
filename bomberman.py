@@ -500,7 +500,7 @@ class Enemy:
 
 class Player:
     # Player velocity in blocks per second
-    VELOCITY = 1.75
+    VELOCITY = 2.0
 
     def __init__(self, game, x, y, sprite='p1', controls=DEFAULT_SINGLEPLAYER_CONTROLS, max_bombs=1, bomb_blast_radius=2):
         self.pos = [x, y]
@@ -949,8 +949,7 @@ class Level:
           and not (0.45 < x - int(x) < 0.55)
           and not (0.45 < y - int(y) < 0.55)
         )
-        print(x, int(x), x - int(x))
-        print(y, int(y), y - int(y))
+
         if may_place:
             self.bombs[pos] = Bomb(*pos, placer, placer.bomb_blast_radius)
         return may_place
